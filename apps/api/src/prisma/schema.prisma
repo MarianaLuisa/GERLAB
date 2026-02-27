@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum LockerStatus {
+  FREE
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum AuditAction {
+  LOCKER_CREATED
+  LOCKER_STATUS_CHANGED
+  ALLOCATION_CREATED
+  ALLOCATION_ENDED
+  NOTIFICATION_SENT
+  DATA_IMPORT
+}
+
+enum AuditEntity {
+  LOCKER
+  ALLOCATION
+  USER
+  SYSTEM
+}
+
+model User {
+  id    String  @id @default(uuid())
+  name  String
+  email String  @unique
+  phone String?
+
+  allocations Allocation[]
+
+  currentLockers Locker[] @relation("CurrentLockerUser")
+}
+
+model Locker {
+  id String @id @default(uuid())
+
+  floor     Int // 2,3,5,6,7,8
+  keyNumber Int // "Nº DA CHAVE"
+  lab       String? // "LABORATÓRIO"
+  status    LockerStatus @default(FREE)
+
+  currentUserId String?
+  currentUser   User?   @relation("CurrentLockerUser", fields: [currentUserId], references: [id])
+
+  allocations Allocation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([floor, keyNumber]) // chave única REAL por andar + nº da chave
+}
+
+model Allocation {
+  id       String @id @default(uuid())
+  userId   String
+  lockerId String
+
+  startAt DateTime // "DATA"
+  dueAt   DateTime? // não existe na planilha: vamos deixar opcional
+  endAt   DateTime?
+
+  user   User   @relation(fields: [userId], references: [id])
+  locker Locker @relation(fields: [lockerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, endAt])
+  @@index([lockerId, endAt])
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  actorEmail String?
+  actorName  String?
+  action     AuditAction
+  entity     AuditEntity
+  entityId   String?
+  details    String
+  createdAt  DateTime    @default(now())
+}
