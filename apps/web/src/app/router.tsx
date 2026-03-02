@@ -10,6 +10,7 @@ import { Protected } from "./Protected";
 
 export const router = createBrowserRouter([
   { path: "/login", element: <Login /> },
+
   {
     path: "/",
     element: (
@@ -25,4 +26,7 @@ export const router = createBrowserRouter([
       { path: "configuracoes", element: <Settings /> },
     ],
   },
+
+  // opcional: qualquer rota inválida -> manda pro login
+  { path: "*", element: <Login /> },
 ]);

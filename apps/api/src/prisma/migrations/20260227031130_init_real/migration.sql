@@ -79,3 +79,13 @@ ALTER TABLE "Allocation" ADD CONSTRAINT "Allocation_userId_fkey" FOREIGN KEY ("u
 
 -- AddForeignKey
 ALTER TABLE "Allocation" ADD CONSTRAINT "Allocation_lockerId_fkey" FOREIGN KEY ("lockerId") REFERENCES "Locker"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- 1 alocação ativa por armário
+CREATE UNIQUE INDEX IF NOT EXISTS "Allocation_one_active_per_locker"
+ON "Allocation"("lockerId")
+WHERE "endAt" IS NULL;
+
+-- 1 alocação ativa por usuário
+CREATE UNIQUE INDEX IF NOT EXISTS "Allocation_one_active_per_user"
+ON "Allocation"("userId")
+WHERE "endAt" IS NULL;

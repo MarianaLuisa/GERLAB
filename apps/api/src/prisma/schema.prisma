@@ -12,13 +12,19 @@ enum LockerStatus {
   MAINTENANCE
 }
 
-enum AuditAction {
-  LOCKER_CREATED
-  LOCKER_STATUS_CHANGED
+enum NotificationChannel {
+  EMAIL
+}
+
+enum NotificationEvent {
   ALLOCATION_CREATED
   ALLOCATION_ENDED
-  NOTIFICATION_SENT
-  DATA_IMPORT
+  ALLOCATION_RENEWED
+  ALLOCATION_CANCELLED
+  LOCKER_MAINTENANCE
+  LOCKER_FREED
+  DUE_SOON
+  OVERDUE
 }
 
 enum AuditEntity {
@@ -26,6 +32,23 @@ enum AuditEntity {
   ALLOCATION
   USER
   SYSTEM
+}
+
+enum AuditAction {
+  LOCKER_CREATED
+  LOCKER_STATUS_CHANGED
+  ALLOCATION_CREATED
+  ALLOCATION_ENDED
+  ALLOCATION_RENEWED
+  ALLOCATION_CANCELLED
+  NOTIFICATION_SENT
+  DATA_IMPORT
+}
+
+enum AccessEvent {
+  LOGIN
+  LOGOUT
+  ACCESS_DENIED
 }
 
 model User {
@@ -42,9 +65,9 @@ model User {
 model Locker {
   id String @id @default(uuid())
 
-  floor     Int // 2,3,5,6,7,8
-  keyNumber Int // "Nº DA CHAVE"
-  lab       String? // "LABORATÓRIO"
+  floor     Int
+  keyNumber Int
+  lab       String?
   status    LockerStatus @default(FREE)
 
   currentUserId String?
@@ -55,7 +78,7 @@ model Locker {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([floor, keyNumber]) // chave única REAL por andar + nº da chave
+  @@unique([floor, keyNumber])
 }
 
 model Allocation {
@@ -63,9 +86,12 @@ model Allocation {
   userId   String
   lockerId String
 
-  startAt DateTime // "DATA"
-  dueAt   DateTime? // não existe na planilha: vamos deixar opcional
+  startAt DateTime
+  dueAt   DateTime?
   endAt   DateTime?
+
+  renewedCount Int     @default(0)
+  cancelReason String?
 
   user   User   @relation(fields: [userId], references: [id])
   locker Locker @relation(fields: [lockerId], references: [id])
@@ -85,5 +111,61 @@ model AuditLog {
   entity     AuditEntity
   entityId   String?
   details    String
+  createdAt  DateTime    @default(now())
+}
+
+model SystemSettings {
+  id String @id @default("singleton")
+
+  // 1) regras de alocação
+  allocationMonths Int     @default(6)
+  allowRenewal     Boolean @default(true)
+  maxRenewals      Int     @default(1)
+
+  // 2) notificações (config real do sistema)
+  notificationsEnabled Boolean @default(false)
+  notificationToEmails String? // CSV: "magda@ufcspa.edu.br,gerlab@ufcspa.edu.br"
+
+  // 3) segurança
+  allowedManagerEmails       String  @default("msbrasil@ufcspa.edu.br,yorrana.marins@ufcspa.edu.br") // CSV
+  requireInstitutionalDomain Boolean @default(true)
+
+  // 4) aparência
+  theme  String @default("light")
+  locale String @default("pt-BR")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationOutbox {
+  id String @id @default(uuid())
+
+  channel NotificationChannel @default(EMAIL)
+  event   NotificationEvent
+
+  toEmail String
+  subject String
+  body    String
+
+  status String    @default("PENDING")
+  sentAt DateTime?
+  error  String?
+
+  entity   AuditEntity
+  entityId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model AccessLog {
+  id         String      @id @default(uuid())
+  actorEmail String?
+  event      AccessEvent
+  ip         String?
+  userAgent  String?
   createdAt  DateTime    @default(now())
 }

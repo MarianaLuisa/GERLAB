@@ -32,8 +32,10 @@ export function Dashboard() {
   }
 
   useEffect(() => {
-    refresh();
-  }, []);
+  refresh();
+  const t = window.setInterval(refresh, 10000); // 10s
+  return () => window.clearInterval(t);
+}, []);
 
   const stats = useMemo(() => {
     const total = lockers.length;

@@ -5,9 +5,8 @@ export type User = {
   id: string;
   name: string;
   email: string;
-  role: Role;
+  phone?: string | null;
 };
-
 
 export type Locker = {
   id: string;
@@ -38,7 +37,12 @@ export type Allocation = {
 export type AuditLog = {
   id: string;
   actorUserName: string;
-  action: "LOCKER_CREATED" | "LOCKER_STATUS_CHANGED" | "ALLOCATION_CREATED" | "ALLOCATION_ENDED";
+  action:
+    | "LOCKER_CREATED"
+    | "LOCKER_STATUS_CHANGED"
+    | "ALLOCATION_CREATED"
+    | "ALLOCATION_ENDED"
+    | "ALLOCATION_CANCELLED";
   entity: "LOCKER" | "ALLOCATION";
   entityId: string;
   createdAt: string;

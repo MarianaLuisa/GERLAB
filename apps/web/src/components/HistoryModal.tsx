@@ -9,6 +9,20 @@ type Props = {
   locker: Locker | null;
 };
 
+function lockerLabel(l: Locker) {
+  const floor = `${l.floor}º`;
+  const key = `Chave ${l.keyNumber}`;
+  const lab = l.lab ? ` • ${l.lab}` : "";
+  return `${floor} • ${key}${lab}`;
+}
+
+function fmt(dt?: string | null) {
+  if (!dt) return "-";
+  const d = new Date(dt);
+  if (Number.isNaN(d.getTime())) return "-";
+  return d.toLocaleString();
+}
+
 export function HistoryModal({ open, onClose, locker }: Props) {
   const [items, setItems] = useState<Allocation[]>([]);
   const [loading, setLoading] = useState(false);
@@ -17,23 +31,29 @@ export function HistoryModal({ open, onClose, locker }: Props) {
   useEffect(() => {
     if (!open || !locker) return;
 
+    let cancelled = false;
+
     (async () => {
       setLoading(true);
       setErr(null);
       try {
         const data = await api.listHistoryByLocker(locker.id);
-        setItems(data);
+        if (!cancelled) setItems(data);
       } catch (e: any) {
-        setErr(e?.message ?? "Erro ao carregar histórico.");
+        if (!cancelled) setErr(e?.message ?? "Erro ao carregar histórico.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     })();
-  }, [open, locker]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, locker?.id]);
 
   const title = useMemo(() => {
     if (!locker) return "Histórico do Armário";
-    return `Histórico • ${locker.code}${locker.location ? ` • ${locker.location}` : ""}`;
+    return `Histórico • ${lockerLabel(locker)}`;
   }, [locker]);
 
   return (
@@ -76,9 +96,9 @@ export function HistoryModal({ open, onClose, locker }: Props) {
               items.map((a) => (
                 <tr key={a.id} className="border-t border-[#E6EAF0]">
                   <td className="px-3 py-2 font-medium text-gray-900">{a.userName}</td>
-                  <td className="px-3 py-2 text-gray-600">{new Date(a.startAt).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-gray-600">{new Date(a.dueAt).toLocaleString()}</td>
-                  <td className="px-3 py-2 text-gray-600">{a.endAt ? new Date(a.endAt).toLocaleString() : "-"}</td>
+                  <td className="px-3 py-2 text-gray-600">{fmt(a.startAt)}</td>
+                  <td className="px-3 py-2 text-gray-600">{a.dueAt ? new Date(a.dueAt).toLocaleString() : "-"}</td>
+                  <td className="px-3 py-2 text-gray-600">{fmt(a.endAt ?? null)}</td>
                 </tr>
               ))
             )}

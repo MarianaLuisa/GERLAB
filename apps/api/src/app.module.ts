@@ -9,6 +9,8 @@ import { AllocationsModule } from "./allocations/allocations.module";
 import { AuditModule } from "./audit/audit.module";
 import { ReportsModule } from "./reports/reports.module";
 import { NotificationsModule } from "./notifications/notifications.module";
+import { SettingsModule } from "./settings/settings.module";
+import { MaintenanceModule} from "./maintenance/maintenance.module";
 
 @Module({
   imports: [
@@ -21,6 +23,9 @@ import { NotificationsModule } from "./notifications/notifications.module";
     AuditModule,
     ReportsModule,
     NotificationsModule,
+    SettingsModule,
+    SettingsModule,
+    MaintenanceModule
   ],
   controllers: [MeController],
 })

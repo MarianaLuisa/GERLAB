@@ -1,87 +1,138 @@
-import { Controller, Get, Query, Req, Res, UseGuards } from "@nestjs/common";
+import { Controller, Get, Query, Res, UseGuards } from "@nestjs/common";
 import type { Response } from "express";
 import { AuthGuard } from "../auth/auth.guard";
 import { PrismaService } from "../prisma/prisma.service";
 import PDFDocument from "pdfkit";
+import path from "path";
+
+function toDateOrUndefined(iso?: string) {
+  if (!iso) return undefined;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
+function actionLabel(a: string) {
+  const map: Record<string, string> = {
+    ALLOCATION_CREATED: "Saída de chave",
+    ALLOCATION_ENDED: "Devolução de chave",
+    ALLOCATION_RENEWED: "Renovação",
+    ALLOCATION_CANCELLED: "Cancelamento",
+    LOCKER_CREATED: "Criação de armário",
+    LOCKER_STATUS_CHANGED: "Alteração de status",
+    DATA_IMPORT: "Importação de dados",
+    NOTIFICATION_SENT: "Notificação enviada",
+  };
+  return map[a] ?? a;
+}
 
 @Controller("reports")
 @UseGuards(AuthGuard)
 export class ReportsController {
   constructor(private prisma: PrismaService) {}
 
-  @Get("pdf")
+  @Get("audit.pdf")
   async auditPdf(
-    @Req() req: any,
     @Res() res: Response,
     @Query("fromISO") fromISO?: string,
     @Query("toISO") toISO?: string
   ) {
+    const from = toDateOrUndefined(fromISO);
+    const to = toDateOrUndefined(toISO);
+
+    const settings = await this.prisma.systemSettings.upsert({
+      where: { id: "singleton" },
+      create: { id: "singleton" },
+      update: {},
+    });
+
     const logs = await this.prisma.auditLog.findMany({
       where: {
         createdAt: {
-          gte: fromISO ? new Date(fromISO) : undefined,
-          lte: toISO ? new Date(toISO) : undefined,
+          gte: from,
+          lte: to,
         },
       },
       orderBy: { createdAt: "desc" },
-      take: 500, // evita PDF gigante
+      take: 2000,
     });
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `attachment; filename="auditoria.pdf"`);
+    res.setHeader("Content-Disposition", `attachment; filename="relatorio_auditoria.pdf"`);
 
-    const doc = new PDFDocument({ margin: 48, size: "A4" });
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
+
     doc.pipe(res);
 
-    // Cabeçalho
-    doc.fontSize(18).text("PROPPGI / UFCSPA", { align: "left" });
-    doc.moveDown(0.2);
-    doc.fontSize(12).text("Relatório de Auditoria", { align: "left" });
-    doc.moveDown(0.5);
+    const logo = path.join(process.cwd(), "assets", "logo.png");
+
+    try {
+      doc.image(logo, 50, 45, { width: 60 });
+    } catch {}
 
     doc
-      .fontSize(10)
-      .fillColor("gray")
-      .text(`Gerado por: ${req.userEmail}`, { align: "left" });
-    doc.text(
-      `Filtro: ${fromISO ? new Date(fromISO).toLocaleString() : "início"}  →  ${toISO ? new Date(toISO).toLocaleString() : "agora"}`,
-      { align: "left" }
-    );
-    doc.moveDown(1);
-    doc.fillColor("black");
+      .fontSize(20)
+      .text("Sistema de Gestão de Armários", 120, 50);
 
-    // Tabela simples
-    const col1 = 48;   // Data/Hora
-    const col2 = 170;  // Quem
-    const col3 = 290;  // Ação
-    const col4 = 380;  // Detalhes
-    const lineH = 14;
+    doc
+      .fontSize(12)
+      .fillColor("#555")
+      .text("PROPPGI / UFCSPA", 120, 75);
 
-    doc.fontSize(10).text("Data/Hora", col1);
-    doc.text("Quem", col2);
-    doc.text("Ação", col3);
-    doc.text("Detalhes", col4);
-    doc.moveDown(0.6);
+    doc.moveDown(2);
 
-    doc.moveTo(48, doc.y).lineTo(547, doc.y).strokeColor("#E6EAF0").stroke();
-    doc.moveDown(0.6);
+    doc
+      .fontSize(14)
+      .fillColor("#000")
+      .text("Relatório de Auditoria", { align: "center" });
 
-    doc.fontSize(9).strokeColor("#E6EAF0");
+    doc.moveDown(0.5);
+
+    const now = new Date();
+
+    doc
+      .fontSize(9)
+      .fillColor("#666")
+      .text(`Gerado em: ${now.toLocaleString("pt-BR")}`, { align: "center" });
+
+    const period =
+      `Período: ${from ? from.toLocaleDateString("pt-BR") : "Início"} até ${
+        to ? to.toLocaleDateString("pt-BR") : "Atual"
+      }`;
+
+    doc.text(period, { align: "center" });
+
+    doc.moveDown(2);
+
+    doc.fontSize(10).fillColor("#000");
 
     for (const l of logs) {
-      // quebra de página
-      if (doc.y > 780) doc.addPage();
+      const when = l.createdAt.toLocaleString("pt-BR");
+      const who = l.actorName || l.actorEmail || "-";
 
-      const when = new Date(l.createdAt).toLocaleString();
-      doc.fillColor("#111827").text(when, col1, doc.y, { width: 110 });
-      doc.fillColor("#111827").text(l.actorName ?? "-", col2, doc.y, { width: 110 });
-      doc.fillColor("#111827").text(l.action, col3, doc.y, { width: 80 });
-      doc.fillColor("#4B5563").text(l.details, col4, doc.y, { width: 160 });
+      doc
+        .font("Helvetica-Bold")
+        .text(`${when}  •  ${who}`);
 
-      doc.moveDown(0.9);
-      doc.moveTo(48, doc.y).lineTo(547, doc.y).stroke();
-      doc.moveDown(0.2);
+      doc
+        .font("Helvetica")
+        .fillColor("#444")
+        .text(`${actionLabel(l.action)}  •  ${l.entity}${l.entityId ? ` (${l.entityId.slice(0,8)})` : ""}`);
+
+      doc
+        .fillColor("#000")
+        .text(l.details);
+
+      doc.moveDown(0.8);
+
+      if (doc.y > 750) doc.addPage();
     }
+
+    doc.moveDown(2);
+
+    doc
+      .fontSize(9)
+      .fillColor("#666")
+      .text(`Total de registros: ${logs.length}`);
 
     doc.end();
   }

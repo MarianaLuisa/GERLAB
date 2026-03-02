@@ -1,9 +1,8 @@
 const STORAGE_KEY = "ufcspa_email";
 
-// ✅ Coloque aqui os 2 e-mails autorizados
 export const ALLOWED_EMAILS = [
-  "gestor1@ufcspa.edu.br",
-  "gestor2@ufcspa.edu.br",
+  "msbrasil@ufcspa.edu.br",
+  "yorrana.marins@ufcspa.edu.br",
 ] as const;
 
 export type AllowedEmail = (typeof ALLOWED_EMAILS)[number];
@@ -34,3 +33,4 @@ export function loginWithEmail(emailRaw: string) {
 
   localStorage.setItem(STORAGE_KEY, email);
 }
+
