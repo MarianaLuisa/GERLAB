@@ -20,7 +20,9 @@ export class AuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const req = context.switchToHttp().getRequest();
-    const email = String(req.headers["x-user-email"] ?? "").toLowerCase().trim();
+    const email = String(req.headers["x-user-email"] ?? "")
+      .toLowerCase()
+      .trim();
 
     const ip =
       (req.headers["x-forwarded-for"] as string) ??
@@ -28,7 +30,7 @@ export class AuthGuard implements CanActivate {
       null;
     const userAgent = String(req.headers["user-agent"] ?? "");
 
-    const deny = async (msg: string) => {
+    const logAccessDenied = async () => {
       try {
         await this.prisma.accessLog.create({
           data: {
@@ -39,38 +41,50 @@ export class AuthGuard implements CanActivate {
           },
         });
       } catch {
-        // não bloqueia a requisição por falha de log
+        // não derruba por falha de log
       }
+    };
+
+    const deny = async (msg: string) => {
+      await logAccessDenied();
       throw new UnauthorizedException(msg);
     };
 
-    if (!email.endsWith("@ufcspa.edu.br")) {
-      await deny("Acesso restrito a e-mail institucional.");
+    // 0) email precisa existir
+    if (!email) {
+      await deny("Faça login com seu e-mail institucional.");
     }
 
-    // 1) env ALLOWED_EMAILS
+    // 1) domínio institucional (fixo)
+    if (!email.endsWith("@ufcspa.edu.br")) {
+      await deny("Acesso restrito a e-mail institucional (@ufcspa.edu.br).");
+    }
+
+    // 2) lista fechada (opcional)
+    // prioridade: ENV -> DB -> nenhum (libera)
     const envAllowed = parseCsv(this.config.get("ALLOWED_EMAILS"));
 
-    // 2) db SystemSettings.allowedManagerEmails (fallback)
     let dbAllowed: string[] = [];
     try {
       const settings = await this.prisma.systemSettings.findUnique({
         where: { id: "singleton" },
+        select: { allowedManagerEmails: true },
       });
       dbAllowed = parseCsv(settings?.allowedManagerEmails);
     } catch {
       // ignore
     }
 
-    const allowed = new Set([...envAllowed, ...dbAllowed]);
+    const list = envAllowed.length ? envAllowed : dbAllowed;
 
-    if (!allowed.has(email)) {
-      await deny("E-mail não autorizado.");
+    // se existir lista, exige estar nela
+    if (list.length > 0 && !list.includes(email)) {
+      await deny("Seu e-mail não está autorizado para acessar o sistema.");
     }
 
     req.userEmail = email;
 
-    // log: login (interpretação: acesso autorizado)
+    // 3) log acesso autorizado (vai registrar por requisição)
     try {
       await this.prisma.accessLog.create({
         data: {
