@@ -1,6 +1,35 @@
 import { useEffect, useMemo, useState } from "react";
+import { Download, FileText, Filter, X } from "lucide-react";
 import { api } from "../services/api";
 import type { AuditLog } from "../types/models";
+import {
+  Alert,
+  Button,
+  CountBadge,
+  DataToolbar,
+  EmptyCell,
+  Field,
+  PageHeader,
+  TableShell,
+  TextInput,
+  tableClass,
+  tdClass,
+  thClass,
+  theadClass,
+} from "../components/ui";
+
+type AuditRow = AuditLog & {
+  actorName?: string | null;
+  actorEmail?: string | null;
+  action: string;
+  entity: string;
+  entityId?: string | null;
+  details?: string | null;
+};
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 function toISOFromLocal(input: string): string | null {
   if (!input) return null;
@@ -17,11 +46,11 @@ function fmt(d: string) {
   }
 }
 
-function safeActor(l: any) {
+function safeActor(l: AuditRow) {
   return l.actorUserName ?? l.actorName ?? l.actorEmail ?? "-";
 }
 
-function actionPt(action: AuditLog["action"]) {
+function actionPt(action: string) {
   const map: Record<string, string> = {
     LOCKER_CREATED: "Armário criado",
     LOCKER_STATUS_CHANGED: "Status do armário alterado",
@@ -39,11 +68,8 @@ export function Reports() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-
-  // paginação
   const [page, setPage] = useState(1);
   const pageSize = 25;
 
@@ -56,8 +82,8 @@ export function Reports() {
       const data = await api.listAudit({ fromISO, toISO });
       setLogs(data);
       setPage(1);
-    } catch (e: any) {
-      setErr(e?.message ?? "Erro ao carregar auditoria.");
+    } catch (e: unknown) {
+      setErr(errorMessage(e, "Erro ao carregar auditoria."));
       setLogs([]);
     } finally {
       setLoading(false);
@@ -69,19 +95,16 @@ export function Reports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // fallback: se algum log vier fora do range, ainda filtramos no front
   const filtered = useMemo(() => {
     const fromT = from ? new Date(from).getTime() : -Infinity;
     const toT = to ? new Date(to).getTime() : Infinity;
-    return logs.filter((l: any) => {
+    return logs.filter((l) => {
       const t = new Date(l.createdAt).getTime();
       return t >= fromT && t <= toT;
     });
   }, [logs, from, to]);
 
-  const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(filtered.length / pageSize));
-  }, [filtered.length]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filtered.length / pageSize)), [filtered.length]);
 
   const pageItems = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -89,18 +112,18 @@ export function Reports() {
   }, [filtered, page]);
 
   async function exportCSV() {
-  const blob = await api.exportCsv({
-    fromISO: from ? new Date(from).toISOString() : undefined,
-    toISO: to ? new Date(to).toISOString() : undefined,
-  });
+    const blob = await api.exportCsv({
+      fromISO: from ? new Date(from).toISOString() : undefined,
+      toISO: to ? new Date(to).toISOString() : undefined,
+    });
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "auditoria.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-}
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "auditoria.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function exportPDF() {
     const blob = await api.exportPdf({
@@ -119,170 +142,110 @@ export function Reports() {
   function clearFilters() {
     setFrom("");
     setTo("");
-    // recarrega “tudo” (sem range)
     setTimeout(() => load(), 0);
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-[#003366]">Relatórios e Auditoria</h1>
-        <p className="text-sm text-gray-600 mt-1">Logs de operações + exportação CSV/PDF</p>
-      </div>
+      <PageHeader
+        title="Relatórios e Auditoria"
+        description="Logs de operações com filtros por período e exportação CSV/PDF."
+      />
 
-      {err ? (
-        <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl p-3">
-          {err}
-        </div>
-      ) : null}
+      {err ? <Alert>{err}</Alert> : null}
 
-      <div className="bg-white rounded-2xl border border-[#E6EAF0] shadow-[0_8px_20px_rgba(17,24,39,0.06)] p-4 flex flex-col gap-3">
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-          <div className="flex gap-3 flex-col sm:flex-row">
-            <div className="space-y-1">
-              <label className="text-xs text-gray-600">De</label>
-              <input
-                type="datetime-local"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs text-gray-600">Até</label>
-              <input
-                type="datetime-local"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-              />
-            </div>
+      <DataToolbar meta={<CountBadge>{loading ? "Carregando..." : `${filtered.length} registros`}</CountBadge>}>
+        <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div className="grid gap-3 md:grid-cols-2">
+            <Field label="De">
+              <TextInput type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </Field>
+            <Field label="Até">
+              <TextInput type="datetime-local" value={to} onChange={(e) => setTo(e.target.value)} />
+            </Field>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              onClick={load}
-              className="border border-[#E6EAF0] px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-[#F5F7FA]"
-            >
-              Aplicar filtro
-            </button>
-
-            <button
-              onClick={clearFilters}
-              className="border border-[#E6EAF0] px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-[#F5F7FA]"
-            >
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={load}>
+              <Filter size={15} />
+              Aplicar
+            </Button>
+            <Button onClick={clearFilters}>
+              <X size={15} />
               Limpar
-            </button>
-
-            <button
-              onClick={exportCSV}
-              disabled={filtered.length === 0}
-              className="bg-[#003366] disabled:opacity-50 text-white px-4 py-2 rounded-xl text-sm font-medium hover:opacity-95"
-            >
-              Exportar CSV
-            </button>
-
-            <button
-              onClick={() => exportPDF().catch((e) => alert(e.message))}
-              disabled={filtered.length === 0}
-              className="border border-[#E6EAF0] disabled:opacity-50 px-4 py-2 rounded-xl text-sm font-medium text-gray-700 hover:bg-[#F5F7FA]"
-            >
-              Exportar PDF
-            </button>
+            </Button>
+            <Button variant="primary" onClick={exportCSV} disabled={filtered.length === 0}>
+              <Download size={15} />
+              CSV
+            </Button>
+            <Button onClick={() => exportPDF().catch((e) => alert(e.message))} disabled={filtered.length === 0}>
+              <FileText size={15} />
+              PDF
+            </Button>
           </div>
         </div>
+      </DataToolbar>
 
-        <div className="text-xs text-gray-500">
-          {loading ? "Carregando..." : `${filtered.length} registros no intervalo`}
-        </div>
-      </div>
-
-      <div className="bg-white rounded-2xl border border-[#E6EAF0] shadow-[0_8px_20px_rgba(17,24,39,0.06)] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F9FAFB] text-gray-600">
+      <TableShell>
+        <table className={tableClass}>
+          <thead className={theadClass}>
             <tr>
-              <th className="text-left px-4 py-3">Data/Hora</th>
-              <th className="text-left px-4 py-3">Quem</th>
-              <th className="text-left px-4 py-3">Ação</th>
-              <th className="text-left px-4 py-3">Entidade</th>
-              <th className="text-left px-4 py-3">Detalhes</th>
+              <th className={thClass}>Data/Hora</th>
+              <th className={thClass}>Quem</th>
+              <th className={thClass}>Ação</th>
+              <th className={thClass}>Entidade</th>
+              <th className={thClass}>Detalhes</th>
             </tr>
           </thead>
 
           <tbody>
             {loading ? (
-              <tr>
-                <td className="px-4 py-6 text-gray-500" colSpan={5}>
-                  Carregando...
-                </td>
-              </tr>
+              <EmptyCell colSpan={5}>Carregando...</EmptyCell>
             ) : pageItems.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-gray-500" colSpan={5}>
-                  Sem registros no intervalo.
-                </td>
-              </tr>
+              <EmptyCell colSpan={5}>Sem registros no intervalo.</EmptyCell>
             ) : (
-              pageItems.map((l: any) => (
-                <tr key={l.id} className="border-t border-[#E6EAF0] align-top">
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmt(l.createdAt)}</td>
-                  <td className="px-4 py-3 font-medium text-gray-900">{safeActor(l)}</td>
-                  <td className="px-4 py-3 text-gray-600">{actionPt(l.action)}</td>
-                  <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                    {l.entity}
-                    {l.entityId ? <span className="text-xs text-gray-400"> • {String(l.entityId).slice(0, 8)}…</span> : null}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{l.details}</td>
-                </tr>
-              ))
+              pageItems.map((l) => {
+                const row = l as AuditRow;
+                return (
+                  <tr key={l.id} className="align-top transition hover:bg-[#FAFCFF]">
+                    <td className={`${tdClass} whitespace-nowrap text-[#60738A]`}>{fmt(l.createdAt)}</td>
+                    <td className={`${tdClass} font-semibold text-[#102A43]`}>{safeActor(row)}</td>
+                    <td className={`${tdClass} text-[#40516A]`}>{actionPt(row.action)}</td>
+                    <td className={`${tdClass} whitespace-nowrap text-[#60738A]`}>
+                      {row.entity}
+                      {row.entityId ? <span className="text-xs text-[#8AA0B8]"> • {String(row.entityId).slice(0, 8)}...</span> : null}
+                    </td>
+                    <td className={`${tdClass} max-w-lg text-[#60738A]`}>{row.details}</td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
 
-        {/* Paginação */}
         {!loading && filtered.length > 0 ? (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#E6EAF0]">
-            <div className="text-xs text-gray-500">
+          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs font-medium text-[#60738A]">
               Página {page} de {totalPages}
             </div>
 
-            <div className="flex gap-2">
-              <button
-                onClick={() => setPage(1)}
-                disabled={page === 1}
-                className="border border-[#E6EAF0] disabled:opacity-50 rounded-xl px-3 py-1 text-xs font-medium text-gray-700 hover:bg-[#F5F7FA]"
-              >
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={() => setPage(1)} disabled={page === 1} className="min-h-8 px-3 py-1 text-xs">
                 Início
-              </button>
-
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="border border-[#E6EAF0] disabled:opacity-50 rounded-xl px-3 py-1 text-xs font-medium text-gray-700 hover:bg-[#F5F7FA]"
-              >
+              </Button>
+              <Button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="min-h-8 px-3 py-1 text-xs">
                 Anterior
-              </button>
-
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="border border-[#E6EAF0] disabled:opacity-50 rounded-xl px-3 py-1 text-xs font-medium text-gray-700 hover:bg-[#F5F7FA]"
-              >
+              </Button>
+              <Button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="min-h-8 px-3 py-1 text-xs">
                 Próxima
-              </button>
-
-              <button
-                onClick={() => setPage(totalPages)}
-                disabled={page === totalPages}
-                className="border border-[#E6EAF0] disabled:opacity-50 rounded-xl px-3 py-1 text-xs font-medium text-gray-700 hover:bg-[#F5F7FA]"
-              >
+              </Button>
+              <Button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="min-h-8 px-3 py-1 text-xs">
                 Fim
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
-      </div>
+      </TableShell>
     </div>
   );
 }

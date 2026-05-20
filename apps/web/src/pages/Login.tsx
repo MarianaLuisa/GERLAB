@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { loginWithEmail } from "../services/auth";
 import logo from "../assets/logo.png";
 import logoUfcspa from "../assets/ufcspalogo.png";
-import { useEffect } from "react";
+import { Alert, Button, Field, TextInput } from "../components/ui";
 
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function Login() {
   const navigate = useNavigate();
@@ -16,76 +20,82 @@ export function Login() {
     try {
       loginWithEmail(email);
       navigate("/", { replace: true });
-    } catch (e: any) {
-      setErr(e?.message ?? "Erro ao autenticar.");
+    } catch (e: unknown) {
+      setErr(errorMessage(e, "Erro ao autenticar."));
     }
   }
+
   useEffect(() => {
-  const email = localStorage.getItem("ufcspa_email");
-  if (email) {
-    navigate("/", { replace: true });
-  }
-}, []);
+    const email = localStorage.getItem("ufcspa_email");
+    if (email) {
+      navigate("/", { replace: true });
+    }
+  }, [navigate]);
 
   return (
-    // <div className="min-h-screen bg-[#F5F7FA] flex items-center justify-center p-6">
-    <div className="min-h-screen from-[#F5F7FA] to-[#E8EEF5] flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-[0_8px_20px_rgba(17,24,39,0.06)] border border-[#E6EAF0] p-6">
-
-    <div className="mb-6 text-center">
-
-      <div className="flex items-center justify-center gap-6 mb-4">
-        <img
-          src={logo}
-          alt="PROPPGI"
-          className="h-20 object-contain"
-        />
-
-        <div className="w-px h-10 bg-gray-200"></div>
-
-        <img
-          src={logoUfcspa}
-          alt="UFCSPA"
-          className="h-20 object-contain"
-        />
-      </div>
-
-      <div className="text-2xl font-semibold text-[#003366]">
-        PROPPGI / UFCSPA
-      </div>
-
-      <div className="text-sm text-gray-600">
-        Sistema de Gestão de Acessos aos Armários
-      </div>
-
-    </div>
-
-        {err ? (
-          <div className="mb-4 text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl p-3">
-            {err}
+    <div className="flex min-h-screen items-center justify-center bg-[#F5F7FA] px-5 py-8">
+      <div className="grid w-full max-w-5xl overflow-hidden rounded-md border border-[#D9E2EC] bg-white lg:grid-cols-[0.95fr_1.05fr]">
+        <section className="flex min-h-[520px] flex-col justify-between bg-[#052B4F] p-8 text-white lg:p-10">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/75">
+              Acesso institucional
+            </div>
+            <h1 className="mt-7 text-4xl font-semibold tracking-[-0.02em]">
+              GERLAB
+            </h1>
+            <p className="mt-4 max-w-md text-base leading-7 text-blue-50/78">
+              Sistema de Gestão de Acessos aos Armários da PROPPGI/UFCSPA.
+            </p>
           </div>
-        ) : null}
 
-        <div className="space-y-2">
-          <label className="text-sm text-gray-600">E-mail institucional</label>
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="nome@ufcspa.edu.br"
-            className="w-full border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-          />
-        </div>
+          <div className="border-t border-white/12 pt-5 text-sm leading-6 text-blue-50/76">
+            Gestão centralizada, auditoria e conformidade para uso institucional.
+          </div>
+        </section>
 
-        <button
-          className="mt-4 w-full rounded-xl bg-[#003366] text-white py-3 font-medium hover:opacity-95"
-          onClick={handleLogin}
-        >
-          Entrar
-        </button>
+        <section className="flex flex-col justify-center p-7 sm:p-10">
+          <div className="mb-8 flex items-center justify-center gap-5">
+            <img src={logo} alt="PROPPGI" className="h-14 w-auto object-contain" />
+            <div className="h-10 w-px bg-[#D9E2EC]" />
+            <img src={logoUfcspa} alt="UFCSPA" className="h-14 w-auto object-contain" />
+          </div>
 
-        <div className="mt-6 text-xs text-gray-500">
-          Acesso restrito a e-mails autorizados. Conformidade LGPD.
-        </div>
+          <div className="mb-6">
+            <h2 className="text-2xl font-semibold tracking-[-0.01em] text-[#102A43]">Entrar no sistema</h2>
+            <p className="mt-1 text-sm text-[#60738A]">
+              Use seu e-mail institucional autorizado.
+            </p>
+          </div>
+
+          {err ? (
+            <div className="mb-4">
+              <Alert>{err}</Alert>
+            </div>
+          ) : null}
+
+          <div className="space-y-4">
+            <Field label="E-mail institucional">
+              <TextInput
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nome@ufcspa.edu.br"
+                type="email"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleLogin();
+                }}
+              />
+            </Field>
+
+            <Button variant="primary" className="w-full" onClick={handleLogin}>
+              Entrar
+              <ArrowRight size={15} />
+            </Button>
+          </div>
+
+          <p className="mt-6 text-xs leading-5 text-[#60738A]">
+            Acesso restrito a e-mails autorizados. Conformidade LGPD.
+          </p>
+        </section>
       </div>
     </div>
   );

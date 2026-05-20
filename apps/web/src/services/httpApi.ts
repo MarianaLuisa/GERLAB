@@ -1,6 +1,26 @@
 import type { ApiClient, AuditFilters } from "./contracts";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const LOCAL_API_URL = "http://localhost:3000";
+
+function normalizeBaseUrl(url: string) {
+  return url.replace(/\/+$/, "");
+}
+
+function resolveBaseUrl() {
+  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
+
+  if (configuredUrl) {
+    return normalizeBaseUrl(configuredUrl);
+  }
+
+  if (import.meta.env.DEV) {
+    return LOCAL_API_URL;
+  }
+
+  return "";
+}
+
+const BASE_URL = resolveBaseUrl();
 
 function getEmail(): string | null {
   return localStorage.getItem("ufcspa_email");

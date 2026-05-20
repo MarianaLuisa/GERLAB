@@ -21,14 +21,10 @@ export function logout() {
 
 export function loginWithEmail(emailRaw: string) {
   const email = (emailRaw || "").trim().toLowerCase();
+  const simpleEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (!email.endsWith("@ufcspa.edu.br")) {
-    throw new Error("Acesso restrito a e-mail institucional @ufcspa.edu.br.");
-  }
-
-  const allowed = ALLOWED_EMAILS.map((e) => e.toLowerCase());
-  if (!allowed.includes(email)) {
-    throw new Error("Este e-mail não está autorizado para acessar o sistema.");
+  if (!simpleEmailRegex.test(email)) {
+    throw new Error("Informe um e-mail válido.");
   }
 
   localStorage.setItem(STORAGE_KEY, email);

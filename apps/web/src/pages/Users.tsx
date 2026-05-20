@@ -1,28 +1,43 @@
 import { useEffect, useMemo, useState } from "react";
+import { Plus, RefreshCw, Search } from "lucide-react";
 import { Modal } from "../components/Modal";
 import { Toast } from "../components/Toast";
 import { api } from "../services/api";
 import type { User } from "../types/models";
+import {
+  Alert,
+  Button,
+  CountBadge,
+  DataToolbar,
+  EmptyCell,
+  Field,
+  PageHeader,
+  TableShell,
+  TextInput,
+  tableClass,
+  tdClass,
+  thClass,
+  theadClass,
+} from "../components/ui";
 
 type Mode = "CREATE" | "EDIT";
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export function Users() {
   const [items, setItems] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-
-  // modal
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("CREATE");
   const [editId, setEditId] = useState<string | null>(null);
-
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-
   const [saving, setSaving] = useState(false);
   const [formErr, setFormErr] = useState<string | null>(null);
 
@@ -32,8 +47,8 @@ export function Users() {
     try {
       const data = await api.listUsers();
       setItems(data);
-    } catch (e: any) {
-      setErr(e?.message ?? "Erro ao carregar usuários.");
+    } catch (e: unknown) {
+      setErr(errorMessage(e, "Erro ao carregar usuários."));
     } finally {
       setLoading(false);
     }
@@ -64,14 +79,13 @@ export function Users() {
     setEditId(u.id);
     setName(u.name ?? "");
     setEmail(u.email ?? "");
-    setPhone((u as any).phone ?? ""); // se teu type User não tem phone, ainda assim funciona
+    setPhone(u.phone ?? "");
     setFormErr(null);
     setOpen(true);
   }
 
   async function save() {
     setFormErr(null);
-
     const n = name.trim();
     const e = email.trim().toLowerCase();
     const p = phone.trim();
@@ -91,8 +105,8 @@ export function Users() {
       }
       setOpen(false);
       await refresh();
-    } catch (e: any) {
-      setFormErr(e?.message ?? "Erro ao salvar.");
+    } catch (e: unknown) {
+      setFormErr(errorMessage(e, "Erro ao salvar."));
     } finally {
       setSaving(false);
     }
@@ -106,88 +120,76 @@ export function Users() {
       await api.deleteUser(u.id);
       setToast("Usuário excluído.");
       await refresh();
-    } catch (e: any) {
-      setToast(e?.message ?? "Erro ao excluir.");
+    } catch (e: unknown) {
+      setToast(errorMessage(e, "Erro ao excluir."));
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold text-[#003366]">Usuários</h1>
-          <p className="text-sm text-gray-600 mt-1">Cadastro, edição e exclusão</p>
-        </div>
+      <PageHeader
+        title="Usuários"
+        description="Cadastro, edição e exclusão de usuários."
+        actions={
+          <Button variant="primary" onClick={openCreate}>
+            <Plus size={15} />
+            Novo usuário
+          </Button>
+        }
+      />
 
-        <button
-          onClick={openCreate}
-          className="rounded-xl bg-[#003366] text-white px-4 py-2 text-sm font-medium hover:opacity-95"
-        >
-          Novo usuário
-        </button>
-      </div>
+      {err ? <Alert>{err}</Alert> : null}
 
-      {err ? (
-        <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl p-3">{err}</div>
-      ) : null}
+      <DataToolbar meta={<CountBadge>{loading ? "Carregando..." : `${filtered.length} usuários`}</CountBadge>}>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="relative w-full md:max-w-lg">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]" size={17} />
+            <TextInput
+              type="text"
+              placeholder="Buscar por nome, e-mail, telefone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
 
-      <div className="bg-white rounded-2xl border border-[#E6EAF0] shadow-[0_8px_20px_rgba(17,24,39,0.06)] p-4 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-        <input
-          type="text"
-          placeholder="Buscar por nome, e-mail, telefone..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-        />
-
-        <div className="flex gap-2">
-          <button
-            onClick={refresh}
-            className="border border-[#E6EAF0] rounded-xl px-4 py-2 text-sm font-medium text-gray-700 hover:bg-[#F5F7FA]"
-          >
+          <Button onClick={refresh}>
+            <RefreshCw size={15} />
             Atualizar
-          </button>
+          </Button>
         </div>
-      </div>
+      </DataToolbar>
 
-      <div className="bg-white rounded-2xl border border-[#E6EAF0] shadow-[0_8px_20px_rgba(17,24,39,0.06)] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F9FAFB] text-gray-600">
+      <TableShell>
+        <table className={tableClass}>
+          <thead className={theadClass}>
             <tr>
-              <th className="text-left px-4 py-3">Nome</th>
-              <th className="text-left px-4 py-3">E-mail</th>
-              <th className="text-left px-4 py-3">Telefone</th>
-              <th className="text-left px-4 py-3">Ações</th>
+              <th className={thClass}>Nome</th>
+              <th className={thClass}>E-mail</th>
+              <th className={thClass}>Telefone</th>
+              <th className={`${thClass} text-right`}>Ações</th>
             </tr>
           </thead>
 
           <tbody>
             {loading ? (
-              <tr>
-                <td className="px-4 py-6 text-gray-500" colSpan={4}>
-                  Carregando...
-                </td>
-              </tr>
+              <EmptyCell colSpan={4}>Carregando...</EmptyCell>
             ) : filtered.length === 0 ? (
-              <tr>
-                <td className="px-4 py-6 text-gray-500" colSpan={4}>
-                  Nenhum usuário encontrado.
-                </td>
-              </tr>
+              <EmptyCell colSpan={4}>Nenhum usuário encontrado.</EmptyCell>
             ) : (
               filtered.map((u) => (
-                <tr key={u.id} className="border-t border-[#E6EAF0]">
-                  <td className="px-4 py-3 font-medium text-gray-900">{u.name}</td>
-                  <td className="px-4 py-3 text-gray-700">{u.email}</td>
-                  <td className="px-4 py-3 text-gray-600">{(u as any).phone ?? "-"}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-3">
-                      <button onClick={() => openEdit(u)} className="text-[#003366] text-xs font-medium hover:underline">
+                <tr key={u.id} className="transition hover:bg-[#FAFCFF]">
+                  <td className={`${tdClass} font-semibold text-[#102A43]`}>{u.name}</td>
+                  <td className={`${tdClass} text-[#40516A]`}>{u.email}</td>
+                  <td className={`${tdClass} text-[#60738A]`}>{u.phone ?? "-"}</td>
+                  <td className={`${tdClass} text-right`}>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button variant="ghost" className="min-h-8 px-2.5 py-1 text-xs" onClick={() => openEdit(u)}>
                         Editar
-                      </button>
-                      <button onClick={() => remove(u)} className="text-red-600 text-xs font-medium hover:underline">
+                      </Button>
+                      <Button variant="danger" className="min-h-8 px-2.5 py-1 text-xs" onClick={() => remove(u)}>
                         Excluir
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -195,57 +197,28 @@ export function Users() {
             )}
           </tbody>
         </table>
-      </div>
+      </TableShell>
 
-      <Modal
-        open={open}
-        onClose={() => setOpen(false)}
-        title={mode === "CREATE" ? "Novo usuário" : "Editar usuário"}
-      >
+      <Modal open={open} onClose={() => setOpen(false)} title={mode === "CREATE" ? "Novo usuário" : "Editar usuário"}>
         <div className="space-y-4">
-          {formErr ? <div className="text-sm text-red-600">{formErr}</div> : null}
+          {formErr ? <Alert>{formErr}</Alert> : null}
 
-          <div className="space-y-2">
-            <label className="text-sm text-gray-600">Nome</label>
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-            />
-          </div>
+          <Field label="Nome">
+            <TextInput value={name} onChange={(e) => setName(e.target.value)} />
+          </Field>
+          <Field label="E-mail">
+            <TextInput value={email} onChange={(e) => setEmail(e.target.value)} />
+          </Field>
+          <Field label="Telefone (opcional)">
+            <TextInput value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </Field>
 
-          <div className="space-y-2">
-            <label className="text-sm text-gray-600">E-mail</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm text-gray-600">Telefone (opcional)</label>
-            <input
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full border border-[#E6EAF0] rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#003366]"
-            />
-          </div>
-
-          <button
-            onClick={save}
-            disabled={saving}
-            className="w-full bg-[#003366] text-white py-2 rounded-xl font-medium hover:opacity-95 disabled:opacity-50"
-          >
+          <Button variant="primary" onClick={save} disabled={saving} className="w-full">
             {saving ? "Salvando..." : "Salvar"}
-          </button>
-
-          <button
-            onClick={() => setOpen(false)}
-            className="w-full border border-[#E6EAF0] rounded-xl py-2 text-sm font-medium text-gray-700 hover:bg-[#F5F7FA]"
-          >
+          </Button>
+          <Button onClick={() => setOpen(false)} className="w-full">
             Cancelar
-          </button>
+          </Button>
         </div>
       </Modal>
 

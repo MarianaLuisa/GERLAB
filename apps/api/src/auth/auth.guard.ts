@@ -14,6 +14,14 @@ function parseCsv(s: string | null | undefined) {
     .filter(Boolean);
 }
 
+function parseBool(v: unknown, fallback: boolean) {
+  if (v === undefined || v === null) return fallback;
+  const s = String(v).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(s)) return true;
+  if (["0", "false", "no", "off"].includes(s)) return false;
+  return fallback;
+}
+
 @Injectable()
 export class AuthGuard implements CanActivate {
   constructor(private config: ConfigService, private prisma: PrismaService) {}
@@ -55,29 +63,32 @@ export class AuthGuard implements CanActivate {
       await deny("Faça login com seu e-mail institucional.");
     }
 
-    // 1) domínio institucional (fixo)
-    if (!email.endsWith("@ufcspa.edu.br")) {
-      await deny("Acesso restrito a e-mail institucional (@ufcspa.edu.br).");
-    }
-
-    // 2) lista fechada (opcional)
-    // prioridade: ENV -> DB -> nenhum (libera)
+    // 1) configurações de segurança (ENV pode sobrescrever DB)
     const envAllowed = parseCsv(this.config.get("ALLOWED_EMAILS"));
+    const envRequireInstitutional = this.config.get("REQUIRE_INSTITUTIONAL_DOMAIN");
 
     let dbAllowed: string[] = [];
+    let dbRequireInstitutional = true;
     try {
       const settings = await this.prisma.systemSettings.findUnique({
         where: { id: "singleton" },
-        select: { allowedManagerEmails: true },
+        select: { allowedManagerEmails: true, requireInstitutionalDomain: true },
       });
       dbAllowed = parseCsv(settings?.allowedManagerEmails);
+      dbRequireInstitutional = settings?.requireInstitutionalDomain ?? true;
     } catch {
       // ignore
     }
 
+    const requireInstitutional = parseBool(envRequireInstitutional, dbRequireInstitutional);
+
+    if (requireInstitutional && !email.endsWith("@ufcspa.edu.br")) {
+      await deny("Acesso restrito a e-mail institucional (@ufcspa.edu.br).");
+    }
+
     const list = envAllowed.length ? envAllowed : dbAllowed;
 
-    // se existir lista, exige estar nela
+    // 2) lista fechada (opcional): se existir lista, exige estar nela
     if (list.length > 0 && !list.includes(email)) {
       await deny("Seu e-mail não está autorizado para acessar o sistema.");
     }

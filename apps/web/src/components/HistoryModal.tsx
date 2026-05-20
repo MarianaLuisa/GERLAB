@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Modal } from "./Modal";
 import { api } from "../services/api";
 import type { Allocation, Locker } from "../types/models";
+import { Alert, Button, EmptyCell, tableClass, tdClass, thClass, theadClass } from "./ui";
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 type Props = {
   open: boolean;
@@ -30,7 +35,6 @@ export function HistoryModal({ open, onClose, locker }: Props) {
 
   useEffect(() => {
     if (!open || !locker) return;
-
     let cancelled = false;
 
     (async () => {
@@ -39,8 +43,8 @@ export function HistoryModal({ open, onClose, locker }: Props) {
       try {
         const data = await api.listHistoryByLocker(locker.id);
         if (!cancelled) setItems(data);
-      } catch (e: any) {
-        if (!cancelled) setErr(e?.message ?? "Erro ao carregar histórico.");
+      } catch (e: unknown) {
+        if (!cancelled) setErr(errorMessage(e, "Erro ao carregar histórico."));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -49,69 +53,58 @@ export function HistoryModal({ open, onClose, locker }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [open, locker?.id]);
+  }, [open, locker]);
 
   const title = useMemo(() => {
-    if (!locker) return "Histórico do Armário";
+    if (!locker) return "Histórico do armário";
     return `Histórico • ${lockerLabel(locker)}`;
   }, [locker]);
 
   return (
     <Modal open={open} onClose={onClose} title={title}>
-      {err ? (
-        <div className="text-sm text-red-600 border border-red-200 bg-red-50 rounded-xl p-3 mb-3">
-          {err}
+      <div className="space-y-4">
+        {err ? <Alert>{err}</Alert> : null}
+
+        <div className="rounded border border-[#D9E2EC] bg-[#F7FAFD] p-3 text-sm">
+          <div className="text-[#667085]">Registros encontrados</div>
+          <div className="mt-1 text-xl font-semibold text-[#0A376A]">
+            {loading ? "Carregando..." : items.length}
+          </div>
         </div>
-      ) : null}
 
-      <div className="bg-[#F5F7FA] border border-[#E6EAF0] rounded-xl p-3 text-sm mb-4">
-        <div className="text-gray-600">Registros encontrados</div>
-        <div className="font-semibold text-[#003366]">{loading ? "Carregando..." : items.length}</div>
-      </div>
-
-      <div className="border border-[#E6EAF0] rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#F9FAFB] text-gray-600">
-            <tr>
-              <th className="text-left px-3 py-2">Usuário</th>
-              <th className="text-left px-3 py-2">Início</th>
-              <th className="text-left px-3 py-2">Devolução prevista</th>
-              <th className="text-left px-3 py-2">Encerrado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
+        <div className="app-scrollbar overflow-x-auto rounded border border-[#D9E2EC]">
+          <table className={tableClass}>
+            <thead className={theadClass}>
               <tr>
-                <td className="px-3 py-4 text-gray-500" colSpan={4}>
-                  Carregando histórico...
-                </td>
+                <th className={thClass}>Usuário</th>
+                <th className={thClass}>Início</th>
+                <th className={thClass}>Devolução prevista</th>
+                <th className={thClass}>Encerrado</th>
               </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td className="px-3 py-4 text-gray-500" colSpan={4}>
-                  Nenhum registro para este armário.
-                </td>
-              </tr>
-            ) : (
-              items.map((a) => (
-                <tr key={a.id} className="border-t border-[#E6EAF0]">
-                  <td className="px-3 py-2 font-medium text-gray-900">{a.userName}</td>
-                  <td className="px-3 py-2 text-gray-600">{fmt(a.startAt)}</td>
-                  <td className="px-3 py-2 text-gray-600">{a.dueAt ? new Date(a.dueAt).toLocaleString() : "-"}</td>
-                  <td className="px-3 py-2 text-gray-600">{fmt(a.endAt ?? null)}</td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {loading ? (
+                <EmptyCell colSpan={4}>Carregando histórico...</EmptyCell>
+              ) : items.length === 0 ? (
+                <EmptyCell colSpan={4}>Nenhum registro para este armário.</EmptyCell>
+              ) : (
+                items.map((a) => (
+                  <tr key={a.id} className="transition hover:bg-[#FAFCFF]">
+                    <td className={`${tdClass} font-semibold text-[#1D2939]`}>{a.userName}</td>
+                    <td className={`${tdClass} text-[#667085]`}>{fmt(a.startAt)}</td>
+                    <td className={`${tdClass} text-[#667085]`}>{a.dueAt ? new Date(a.dueAt).toLocaleString() : "-"}</td>
+                    <td className={`${tdClass} text-[#667085]`}>{fmt(a.endAt ?? null)}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-      <button
-        onClick={onClose}
-        className="mt-4 w-full border border-[#E6EAF0] rounded-xl py-2 text-sm font-medium text-gray-700 hover:bg-[#F5F7FA]"
-      >
-        Fechar
-      </button>
+        <Button onClick={onClose} className="w-full">
+          Fechar
+        </Button>
+      </div>
     </Modal>
   );
 }
