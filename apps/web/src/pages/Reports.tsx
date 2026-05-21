@@ -64,6 +64,17 @@ function actionPt(action: string) {
   return map[action] ?? action;
 }
 
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function Reports() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [from, setFrom] = useState("");
@@ -112,31 +123,31 @@ export function Reports() {
   }, [filtered, page]);
 
   async function exportCSV() {
-    const blob = await api.exportCsv({
-      fromISO: from ? new Date(from).toISOString() : undefined,
-      toISO: to ? new Date(to).toISOString() : undefined,
-    });
+    setErr(null);
+    try {
+      const blob = await api.exportCsv({
+        fromISO: toISOFromLocal(from) ?? undefined,
+        toISO: toISOFromLocal(to) ?? undefined,
+      });
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "auditoria.csv";
-    a.click();
-    URL.revokeObjectURL(url);
+      downloadBlob(blob, "auditoria-gerlab.csv");
+    } catch (e: unknown) {
+      setErr(errorMessage(e, "Erro ao exportar CSV."));
+    }
   }
 
   async function exportPDF() {
-    const blob = await api.exportPdf({
-      fromISO: from ? new Date(from).toISOString() : undefined,
-      toISO: to ? new Date(to).toISOString() : undefined,
-    });
+    setErr(null);
+    try {
+      const blob = await api.exportPdf({
+        fromISO: toISOFromLocal(from) ?? undefined,
+        toISO: toISOFromLocal(to) ?? undefined,
+      });
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "auditoria.pdf";
-    a.click();
-    URL.revokeObjectURL(url);
+      downloadBlob(blob, "relatorio-auditoria-gerlab.pdf");
+    } catch (e: unknown) {
+      setErr(errorMessage(e, "Erro ao exportar PDF."));
+    }
   }
 
   function clearFilters() {
@@ -178,7 +189,7 @@ export function Reports() {
               <Download size={15} />
               CSV
             </Button>
-            <Button onClick={() => exportPDF().catch((e) => alert(e.message))} disabled={filtered.length === 0}>
+            <Button onClick={exportPDF} disabled={filtered.length === 0}>
               <FileText size={15} />
               PDF
             </Button>

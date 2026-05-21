@@ -97,7 +97,7 @@ export class AuthGuard implements CanActivate {
       await deny('Acesso restrito a e-mail institucional (@ufcspa.edu.br).');
     }
 
-    const list = envAllowed.length ? envAllowed : dbAllowed;
+    const list = Array.from(new Set([...envAllowed, ...dbAllowed]));
 
     // 2) lista fechada (opcional): se existir lista, exige estar nela
     if (list.length > 0 && !list.includes(email)) {

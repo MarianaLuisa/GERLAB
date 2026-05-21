@@ -19,6 +19,22 @@ type Form = {
   locale: string;
 };
 
+type SettingsResponse = Awaited<ReturnType<typeof api.getSettings>>;
+
+function normalizeSettings(s: SettingsResponse): Form {
+  return {
+    allocationMonths: Number(s.allocationMonths ?? 6),
+    allowRenewal: Boolean(s.allowRenewal ?? true),
+    maxRenewals: Number(s.maxRenewals ?? 1),
+    notificationsEnabled: Boolean(s.notificationsEnabled ?? false),
+    notificationToEmails: s.notificationToEmails ?? "",
+    allowedManagerEmails: s.allowedManagerEmails ?? "",
+    requireInstitutionalDomain: Boolean(s.requireInstitutionalDomain ?? true),
+    theme: s.theme ?? "light",
+    locale: s.locale ?? "pt-BR",
+  };
+}
+
 export function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,17 +53,7 @@ export function Settings() {
       setErr(null);
       try {
         const s = await api.getSettings();
-        setF({
-          allocationMonths: Number(s.allocationMonths ?? 6),
-          allowRenewal: Boolean(s.allowRenewal ?? true),
-          maxRenewals: Number(s.maxRenewals ?? 1),
-          notificationsEnabled: Boolean(s.notificationsEnabled ?? false),
-          notificationToEmails: s.notificationToEmails ?? "",
-          allowedManagerEmails: s.allowedManagerEmails ?? "",
-          requireInstitutionalDomain: Boolean(s.requireInstitutionalDomain ?? true),
-          theme: s.theme ?? "light",
-          locale: s.locale ?? "pt-BR",
-        });
+        setF(normalizeSettings(s));
       } catch (e: unknown) {
         setErr(errorMessage(e, "Erro ao carregar configurações."));
       } finally {
@@ -77,7 +83,7 @@ export function Settings() {
     setOk(null);
 
     try {
-      await api.updateSettings({
+      const saved = await api.updateSettings({
         allocationMonths: f.allocationMonths,
         allowRenewal: f.allowRenewal,
         maxRenewals: f.maxRenewals,
@@ -89,6 +95,8 @@ export function Settings() {
         locale: f.locale,
       });
 
+      const reloaded = await api.getSettings().catch(() => saved);
+      setF(normalizeSettings(reloaded));
       setOk("Configurações salvas.");
     } catch (e: unknown) {
       setErr(errorMessage(e, "Erro ao salvar configurações."));

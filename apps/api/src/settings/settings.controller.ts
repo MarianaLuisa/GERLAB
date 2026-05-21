@@ -18,10 +18,10 @@ class UpdateSettingsDto {
 
   // notificações
   @IsOptional() @IsBoolean() notificationsEnabled?: boolean;
-  @IsOptional() @IsString() notificationToEmails?: string; // CSV
+  @IsOptional() @IsString() notificationToEmails?: string | null; // CSV
 
   // segurança
-  @IsOptional() @IsString() allowedManagerEmails?: string; // CSV
+  @IsOptional() @IsString() allowedManagerEmails?: string | null; // CSV
   @IsOptional() @IsBoolean() requireInstitutionalDomain?: boolean;
 
   // aparência
@@ -61,12 +61,12 @@ export class SettingsController {
     if (dto.notificationsEnabled !== undefined)
       data.notificationsEnabled = dto.notificationsEnabled;
     if (dto.notificationToEmails !== undefined) {
-      const v = dto.notificationToEmails.trim();
+      const v = String(dto.notificationToEmails ?? '').trim();
       data.notificationToEmails = v ? v : null;
     }
 
     if (dto.allowedManagerEmails !== undefined) {
-      const v = dto.allowedManagerEmails.trim();
+      const v = String(dto.allowedManagerEmails ?? '').trim();
       if (!v)
         throw new BadRequestException(
           'Informe os e-mails gestores autorizados (CSV).',
