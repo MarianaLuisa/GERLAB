@@ -7,11 +7,17 @@ import {
   Post,
   Req,
   UseGuards,
-} from "@nestjs/common";
-import { IsEmail, IsOptional, IsString } from "class-validator";
-import { AuthGuard } from "../auth/auth.guard";
-import { PrismaService } from "../prisma/prisma.service";
-import { NotificationsService } from "../notifications/notifications.service";
+} from '@nestjs/common';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { AuthGuard } from '../auth/auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import {
+  endActiveAllocationsForLocker,
+  findActiveAllocationForLocker,
+  hasActiveAllocationForUser,
+  reconcileLockerState,
+} from './allocation-integrity';
 
 class CreateAllocationDto {
   @IsString()
@@ -44,8 +50,12 @@ function addMonths(date: Date, months: number) {
   return d;
 }
 
-function lockerLabel(l: { floor: number; keyNumber: number; lab: string | null }) {
-  return `${l.floor}º • Chave ${l.keyNumber}${l.lab ? ` • ${l.lab}` : ""}`;
+function lockerLabel(l: {
+  floor: number;
+  keyNumber: number;
+  lab: string | null;
+}) {
+  return `${l.floor}º • Chave ${l.keyNumber}${l.lab ? ` • ${l.lab}` : ''}`;
 }
 
 function mapAllocation(a: any) {
@@ -66,39 +76,39 @@ function mapAllocation(a: any) {
   };
 }
 
-@Controller("allocations")
+@Controller('allocations')
 @UseGuards(AuthGuard)
 export class AllocationsController {
   constructor(
     private prisma: PrismaService,
-    private notifications: NotificationsService
+    private notifications: NotificationsService,
   ) {}
 
-  @Get("active")
+  @Get('active')
   async active() {
     const xs = await this.prisma.allocation.findMany({
       where: { endAt: null },
-      orderBy: { startAt: "desc" },
+      orderBy: { startAt: 'desc' },
       include: { user: true, locker: true },
     });
     return xs.map(mapAllocation);
   }
 
-  @Get("history/user/:userId")
-  async historyByUser(@Param("userId") userId: string) {
+  @Get('history/user/:userId')
+  async historyByUser(@Param('userId') userId: string) {
     const xs = await this.prisma.allocation.findMany({
       where: { userId },
-      orderBy: { startAt: "desc" },
+      orderBy: { startAt: 'desc' },
       include: { user: true, locker: true },
     });
     return xs.map(mapAllocation);
   }
 
-  @Get("history/locker/:lockerId")
-  async historyByLocker(@Param("lockerId") lockerId: string) {
+  @Get('history/locker/:lockerId')
+  async historyByLocker(@Param('lockerId') lockerId: string) {
     const xs = await this.prisma.allocation.findMany({
       where: { lockerId },
-      orderBy: { startAt: "desc" },
+      orderBy: { startAt: 'desc' },
       include: { user: true, locker: true },
     });
     return xs.map(mapAllocation);
@@ -110,16 +120,23 @@ export class AllocationsController {
     const userName = dto.userName.trim();
     const userPhone = dto.userPhone?.trim() || null;
 
-    if (!userName) throw new BadRequestException("Informe o nome do usuário.");
+    if (!userName) throw new BadRequestException('Informe o nome do usuário.');
 
-    const locker = await this.prisma.locker.findUnique({ where: { id: dto.lockerId } });
-    if (!locker) throw new BadRequestException("Armário não encontrado.");
-    if (locker.status !== "FREE") throw new BadRequestException("Chave indisponível (não está Livre).");
+    await this.prisma.$transaction((tx) =>
+      reconcileLockerState(tx, dto.lockerId),
+    );
+
+    const locker = await this.prisma.locker.findUnique({
+      where: { id: dto.lockerId },
+    });
+    if (!locker) throw new BadRequestException('Armário não encontrado.');
+    if (locker.status === 'MAINTENANCE')
+      throw new BadRequestException('Chave indisponível (em Manutenção).');
 
     // settings
     const settings = await this.prisma.systemSettings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton" },
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
       update: {},
     });
 
@@ -135,19 +152,26 @@ export class AllocationsController {
       });
 
       // integridade: usuário não pode ter alocação ativa
-      const userHasActive = await tx.allocation.findFirst({
-        where: { userId: user.id, endAt: null },
-      });
+      const userHasActive = await hasActiveAllocationForUser(tx, user.id);
       if (userHasActive) {
-        throw new BadRequestException("Este usuário já possui uma alocação ativa.");
+        throw new BadRequestException(
+          'Este usuário já possui uma alocação ativa.',
+        );
       }
 
       // integridade: armário não pode ter alocação ativa (dupla)
-      const lockerHasActive = await tx.allocation.findFirst({
-        where: { lockerId: locker.id, endAt: null },
-      });
+      const lockerState = await reconcileLockerState(tx, locker.id);
+      if (lockerState?.status === 'MAINTENANCE') {
+        throw new BadRequestException('Chave indisponível (em Manutenção).');
+      }
+      const lockerHasActive = await findActiveAllocationForLocker(
+        tx,
+        locker.id,
+      );
       if (lockerHasActive) {
-        throw new BadRequestException("Este armário já possui uma alocação ativa.");
+        throw new BadRequestException(
+          'Este armário já possui uma alocação ativa.',
+        );
       }
 
       const a = await tx.allocation.create({
@@ -165,17 +189,17 @@ export class AllocationsController {
 
       await tx.locker.update({
         where: { id: locker.id },
-        data: { status: "OCCUPIED", currentUserId: user.id },
+        data: { status: 'OCCUPIED', currentUserId: user.id },
       });
 
       await tx.auditLog.create({
         data: {
           actorEmail: req.userEmail ?? null,
           actorName: req.userEmail ?? null,
-          action: "ALLOCATION_CREATED",
-          entity: "ALLOCATION",
+          action: 'ALLOCATION_CREATED',
+          entity: 'ALLOCATION',
           entityId: a.id,
-          details: `Saída registrada: ${user.name} -> ${lockerLabel(locker)} (previsto até ${dueAt.toLocaleString("pt-BR")})`,
+          details: `Saída registrada: ${user.name} -> ${lockerLabel(locker)} (previsto até ${dueAt.toLocaleString('pt-BR')})`,
         },
       });
 
@@ -183,81 +207,96 @@ export class AllocationsController {
     });
 
     // notificação (outbox + SMTP se tiver)
-    await this.notifications.send({
-      event: "ALLOCATION_CREATED",
-      entity: "ALLOCATION",
-      entityId: result.id,
-      toEmail: (await this.prisma.systemSettings.findUnique({ where: { id: "singleton" } }))?.notificationToEmails?.split(",")[0]?.trim()
-        || req.userEmail, // fallback
-      subject: "Nova alocação registrada",
-      body: `Alocação criada.\nUsuário: ${result.user?.name}\nArmário: ${result.locker ? lockerLabel(result.locker) : ""}\nInício: ${new Date(result.startAt).toLocaleString("pt-BR")}\nPrevisto: ${result.dueAt ? new Date(result.dueAt).toLocaleString("pt-BR") : "-"}`,
-      actorEmail: req.userEmail ?? null,
-      actorName: req.userEmail ?? null,
-    }).catch(() => {});
+    await this.notifications
+      .send({
+        event: 'ALLOCATION_CREATED',
+        entity: 'ALLOCATION',
+        entityId: result.id,
+        toEmail:
+          (
+            await this.prisma.systemSettings.findUnique({
+              where: { id: 'singleton' },
+            })
+          )?.notificationToEmails
+            ?.split(',')[0]
+            ?.trim() || req.userEmail, // fallback
+        subject: 'Nova alocação registrada',
+        body: `Alocação criada.\nUsuário: ${result.user?.name}\nArmário: ${result.locker ? lockerLabel(result.locker) : ''}\nInício: ${new Date(result.startAt).toLocaleString('pt-BR')}\nPrevisto: ${result.dueAt ? new Date(result.dueAt).toLocaleString('pt-BR') : '-'}`,
+        actorEmail: req.userEmail ?? null,
+        actorName: req.userEmail ?? null,
+      })
+      .catch(() => {});
 
     return mapAllocation(result);
   }
 
-  @Post(":id/end")
-  async end(@Req() req: any, @Param("id") id: string) {
+  @Post(':id/end')
+  async end(@Req() req: any, @Param('id') id: string) {
     const a = await this.prisma.allocation.findUnique({
       where: { id },
       include: { locker: true, user: true },
     });
-    if (!a || a.endAt) throw new BadRequestException("Alocação ativa não encontrada.");
+    if (!a || a.endAt)
+      throw new BadRequestException('Alocação ativa não encontrada.');
 
-    await this.prisma.$transaction(async (tx) => {
-      await tx.allocation.update({ where: { id }, data: { endAt: new Date() } });
-
-      await tx.locker.update({
-        where: { id: a.lockerId },
-        data: { status: "FREE", currentUserId: null },
-      });
+    const endedAt = new Date();
+    const result = await this.prisma.$transaction(async (tx) => {
+      const ended = await endActiveAllocationsForLocker(
+        tx,
+        a.lockerId,
+        endedAt,
+      );
 
       await tx.auditLog.create({
         data: {
           actorEmail: req.userEmail ?? null,
           actorName: req.userEmail ?? null,
-          action: "ALLOCATION_ENDED",
-          entity: "ALLOCATION",
+          action: 'ALLOCATION_ENDED',
+          entity: 'ALLOCATION',
           entityId: id,
-          details: `Devolução registrada: ${a.user?.name ?? "Usuário"} -> ${a.locker ? lockerLabel(a.locker) : "Chave"}`,
+          details: `Devolução registrada: ${a.user?.name ?? 'Usuário'} -> ${a.locker ? lockerLabel(a.locker) : 'Chave'}${ended.endedCount > 1 ? ` (${ended.endedCount} alocações ativas encerradas por reconciliação)` : ''}`,
         },
       });
+
+      return ended;
     });
 
-    await this.notifications.send({
-      event: "ALLOCATION_ENDED",
-      entity: "ALLOCATION",
-      entityId: id,
-      toEmail: req.userEmail ?? "msbrasil@ufcspa.edu.br",
-      subject: "Devolução registrada",
-      body: `Devolução registrada.\nUsuário: ${a.user?.name}\nArmário: ${a.locker ? lockerLabel(a.locker) : ""}\nQuando: ${new Date().toLocaleString("pt-BR")}`,
-      actorEmail: req.userEmail ?? null,
-      actorName: req.userEmail ?? null,
-    }).catch(() => {});
+    await this.notifications
+      .send({
+        event: 'ALLOCATION_ENDED',
+        entity: 'ALLOCATION',
+        entityId: id,
+        toEmail: req.userEmail ?? 'msbrasil@ufcspa.edu.br',
+        subject: 'Devolução registrada',
+        body: `Devolução registrada.\nUsuário: ${a.user?.name}\nArmário: ${a.locker ? lockerLabel(a.locker) : ''}\nQuando: ${endedAt.toLocaleString('pt-BR')}`,
+        actorEmail: req.userEmail ?? null,
+        actorName: req.userEmail ?? null,
+      })
+      .catch(() => {});
 
-    return { ok: true };
+    return { ok: true, endedCount: result.endedCount };
   }
 
-  @Post(":id/renew")
-  async renew(@Req() req: any, @Param("id") id: string) {
+  @Post(':id/renew')
+  async renew(@Req() req: any, @Param('id') id: string) {
     const settings = await this.prisma.systemSettings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton" },
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
       update: {},
     });
 
-    if (!settings.allowRenewal) throw new BadRequestException("Renovação desativada nas configurações.");
+    if (!settings.allowRenewal)
+      throw new BadRequestException('Renovação desativada nas configurações.');
 
     const a = await this.prisma.allocation.findUnique({
       where: { id },
       include: { locker: true, user: true },
     });
-    if (!a || a.endAt) throw new BadRequestException("Alocação ativa não encontrada.");
+    if (!a || a.endAt)
+      throw new BadRequestException('Alocação ativa não encontrada.');
 
     if (a.renewedCount >= settings.maxRenewals) {
-      throw new BadRequestException("Limite de renovações atingido.");
+      throw new BadRequestException('Limite de renovações atingido.');
     }
 
     const base = a.dueAt ?? new Date();
@@ -274,39 +313,46 @@ export class AllocationsController {
         data: {
           actorEmail: req.userEmail ?? null,
           actorName: req.userEmail ?? null,
-          action: "ALLOCATION_RENEWED",
-          entity: "ALLOCATION",
+          action: 'ALLOCATION_RENEWED',
+          entity: 'ALLOCATION',
           entityId: id,
-          details: `Renovação: ${up.user?.name ?? "Usuário"} -> ${up.locker ? lockerLabel(up.locker) : "Chave"} (novo prazo ${nextDue.toLocaleString("pt-BR")})`,
+          details: `Renovação: ${up.user?.name ?? 'Usuário'} -> ${up.locker ? lockerLabel(up.locker) : 'Chave'} (novo prazo ${nextDue.toLocaleString('pt-BR')})`,
         },
       });
 
       return up;
     });
 
-    await this.notifications.send({
-      event: "ALLOCATION_RENEWED",
-      entity: "ALLOCATION",
-      entityId: id,
-      toEmail: req.userEmail ?? "msbrasil@ufcspa.edu.br",
-      subject: "Alocação renovada",
-      body: `Renovação registrada.\nUsuário: ${updated.user?.name}\nArmário: ${updated.locker ? lockerLabel(updated.locker) : ""}\nNovo prazo: ${nextDue.toLocaleString("pt-BR")}`,
-      actorEmail: req.userEmail ?? null,
-      actorName: req.userEmail ?? null,
-    }).catch(() => {});
+    await this.notifications
+      .send({
+        event: 'ALLOCATION_RENEWED',
+        entity: 'ALLOCATION',
+        entityId: id,
+        toEmail: req.userEmail ?? 'msbrasil@ufcspa.edu.br',
+        subject: 'Alocação renovada',
+        body: `Renovação registrada.\nUsuário: ${updated.user?.name}\nArmário: ${updated.locker ? lockerLabel(updated.locker) : ''}\nNovo prazo: ${nextDue.toLocaleString('pt-BR')}`,
+        actorEmail: req.userEmail ?? null,
+        actorName: req.userEmail ?? null,
+      })
+      .catch(() => {});
 
     return mapAllocation(updated);
   }
 
-  @Post(":id/cancel")
-  async cancel(@Req() req: any, @Param("id") id: string, @Body() dto: CancelAllocationDto) {
+  @Post(':id/cancel')
+  async cancel(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: CancelAllocationDto,
+  ) {
     const a = await this.prisma.allocation.findUnique({
       where: { id },
       include: { locker: true, user: true },
     });
-    if (!a || a.endAt) throw new BadRequestException("Alocação ativa não encontrada.");
+    if (!a || a.endAt)
+      throw new BadRequestException('Alocação ativa não encontrada.');
 
-    const reason = dto.reason?.trim() || "Cancelado pelo gestor";
+    const reason = dto.reason?.trim() || 'Cancelado pelo gestor';
 
     await this.prisma.$transaction(async (tx) => {
       await tx.allocation.update({
@@ -316,31 +362,33 @@ export class AllocationsController {
 
       await tx.locker.update({
         where: { id: a.lockerId },
-        data: { status: "FREE", currentUserId: null },
+        data: { status: 'FREE', currentUserId: null },
       });
 
       await tx.auditLog.create({
         data: {
           actorEmail: req.userEmail ?? null,
           actorName: req.userEmail ?? null,
-          action: "ALLOCATION_CANCELLED",
-          entity: "ALLOCATION",
+          action: 'ALLOCATION_CANCELLED',
+          entity: 'ALLOCATION',
           entityId: id,
-          details: `Cancelamento: ${a.user?.name ?? "Usuário"} -> ${a.locker ? lockerLabel(a.locker) : "Chave"}. Motivo: ${reason}`,
+          details: `Cancelamento: ${a.user?.name ?? 'Usuário'} -> ${a.locker ? lockerLabel(a.locker) : 'Chave'}. Motivo: ${reason}`,
         },
       });
     });
 
-    await this.notifications.send({
-      event: "ALLOCATION_CANCELLED",
-      entity: "ALLOCATION",
-      entityId: id,
-      toEmail: req.userEmail ?? "msbrasil@ufcspa.edu.br",
-      subject: "Alocação cancelada",
-      body: `Cancelamento registrado.\nUsuário: ${a.user?.name}\nArmário: ${a.locker ? lockerLabel(a.locker) : ""}\nMotivo: ${reason}`,
-      actorEmail: req.userEmail ?? null,
-      actorName: req.userEmail ?? null,
-    }).catch(() => {});
+    await this.notifications
+      .send({
+        event: 'ALLOCATION_CANCELLED',
+        entity: 'ALLOCATION',
+        entityId: id,
+        toEmail: req.userEmail ?? 'msbrasil@ufcspa.edu.br',
+        subject: 'Alocação cancelada',
+        body: `Cancelamento registrado.\nUsuário: ${a.user?.name}\nArmário: ${a.locker ? lockerLabel(a.locker) : ''}\nMotivo: ${reason}`,
+        actorEmail: req.userEmail ?? null,
+        actorName: req.userEmail ?? null,
+      })
+      .catch(() => {});
 
     return { ok: true };
   }

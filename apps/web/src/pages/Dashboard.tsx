@@ -72,14 +72,14 @@ export function Dashboard() {
 
       {err ? <Alert>{err}</Alert> : null}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard title="Total de chaves" value={loading ? "..." : stats.total} accent="slate" />
         <MetricCard title="Livres" value={loading ? "..." : stats.free} accent="green" />
         <MetricCard title="Ocupadas" value={loading ? "..." : stats.occupied} accent="blue" />
         <MetricCard title="Em manutenção" value={loading ? "..." : stats.maintenance} accent="amber" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-2">
         <Panel>
           <SectionHeader
             title="Resumo de ocupação"
@@ -87,7 +87,7 @@ export function Dashboard() {
             actions={<CountBadge>{lockers.length} armários</CountBadge>}
           />
 
-          <div className="space-y-4 p-5">
+          <div className="space-y-3.5 p-4">
             {(["FREE", "OCCUPIED", "MAINTENANCE"] as Locker["status"][]).map((s) => {
               const count = lockers.filter((l) => l.status === s).length;
               const total = lockers.length || 1;
@@ -95,7 +95,7 @@ export function Dashboard() {
 
               return (
                 <div key={s} className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-[13px] leading-5">
                     <span className="font-medium text-[#344054]">{statusLabel(s)}</span>
                     <span className="text-[#60738A]">
                       {count} ({pct}%)
@@ -118,17 +118,17 @@ export function Dashboard() {
           />
 
           {loading ? (
-            <div className="p-5 text-sm text-[#60738A]">Carregando...</div>
+            <div className="p-4 text-[13px] text-[#60738A]">Carregando...</div>
           ) : lastAllocations.length === 0 ? (
-            <div className="m-5 rounded border border-dashed border-[#C8D4E1] p-5 text-sm text-[#60738A]">
+            <div className="m-4 rounded border border-dashed border-[#C8D4E1] p-4 text-[13px] text-[#60738A]">
               Nenhuma alocação ativa no momento.
             </div>
           ) : (
             <div className="divide-y divide-[#E8EDF3]">
               {lastAllocations.map((a) => (
-                <div key={a.id} className="flex items-start justify-between gap-4 px-5 py-3">
+                <div key={a.id} className="flex items-start justify-between gap-4 px-4 py-2.5">
                   <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-[#102A43]">{a.userName}</div>
+                    <div className="truncate text-[13px] font-semibold leading-5 text-[#102A43]">{a.userName}</div>
                     <div className="mt-1 truncate text-xs text-[#60738A]">{a.lockerLabel}</div>
                   </div>
                   <div className="shrink-0 text-right text-xs text-[#60738A]">

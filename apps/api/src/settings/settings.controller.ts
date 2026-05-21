@@ -1,7 +1,14 @@
-import { Body, Controller, Get, Put, UseGuards, BadRequestException } from "@nestjs/common";
-import { IsBoolean, IsInt, IsOptional, IsString, Min } from "class-validator";
-import { AuthGuard } from "../auth/auth.guard";
-import { PrismaService } from "../prisma/prisma.service";
+import {
+  Body,
+  Controller,
+  Get,
+  Put,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
+import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { AuthGuard } from '../auth/auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
 class UpdateSettingsDto {
   // regras
@@ -22,15 +29,15 @@ class UpdateSettingsDto {
   @IsOptional() @IsString() locale?: string;
 }
 
-@Controller("settings")
+@Controller('settings')
 @UseGuards(AuthGuard)
 export class SettingsController {
   constructor(private prisma: PrismaService) {}
 
   private async ensureRow() {
     return this.prisma.systemSettings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton" },
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
       update: {},
     });
   }
@@ -46,11 +53,13 @@ export class SettingsController {
 
     const data: any = {};
 
-    if (dto.allocationMonths !== undefined) data.allocationMonths = dto.allocationMonths;
+    if (dto.allocationMonths !== undefined)
+      data.allocationMonths = dto.allocationMonths;
     if (dto.allowRenewal !== undefined) data.allowRenewal = dto.allowRenewal;
     if (dto.maxRenewals !== undefined) data.maxRenewals = dto.maxRenewals;
 
-    if (dto.notificationsEnabled !== undefined) data.notificationsEnabled = dto.notificationsEnabled;
+    if (dto.notificationsEnabled !== undefined)
+      data.notificationsEnabled = dto.notificationsEnabled;
     if (dto.notificationToEmails !== undefined) {
       const v = dto.notificationToEmails.trim();
       data.notificationToEmails = v ? v : null;
@@ -58,16 +67,20 @@ export class SettingsController {
 
     if (dto.allowedManagerEmails !== undefined) {
       const v = dto.allowedManagerEmails.trim();
-      if (!v) throw new BadRequestException("Informe os e-mails gestores autorizados (CSV).");
+      if (!v)
+        throw new BadRequestException(
+          'Informe os e-mails gestores autorizados (CSV).',
+        );
       data.allowedManagerEmails = v;
     }
-    if (dto.requireInstitutionalDomain !== undefined) data.requireInstitutionalDomain = dto.requireInstitutionalDomain;
+    if (dto.requireInstitutionalDomain !== undefined)
+      data.requireInstitutionalDomain = dto.requireInstitutionalDomain;
 
-    if (dto.theme !== undefined) data.theme = dto.theme.trim() || "light";
-    if (dto.locale !== undefined) data.locale = dto.locale.trim() || "pt-BR";
+    if (dto.theme !== undefined) data.theme = dto.theme.trim() || 'light';
+    if (dto.locale !== undefined) data.locale = dto.locale.trim() || 'pt-BR';
 
     return this.prisma.systemSettings.update({
-      where: { id: "singleton" },
+      where: { id: 'singleton' },
       data,
     });
   }

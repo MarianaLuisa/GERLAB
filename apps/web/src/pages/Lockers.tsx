@@ -328,9 +328,9 @@ export function Lockers() {
           </CountBadge>
         }
       >
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(220px,1fr)_190px]">
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-[minmax(220px,1fr)_180px]">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]" size={17} />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]" size={16} />
             <TextInput
               type="text"
               placeholder="Buscar por andar, chave, lab ou usuário..."
@@ -352,17 +352,17 @@ export function Lockers() {
       {loading ? (
         <LockerGridSkeleton />
       ) : filtered.length === 0 ? (
-        <Panel className="p-10 text-center">
+        <Panel className="p-9 text-center">
           <div className="mx-auto flex max-w-md flex-col items-center gap-2">
-            <KeyRound size={26} className="text-[#8AA0B8]" />
-            <h2 className="text-base font-semibold text-[#102A43]">Nenhum armário encontrado</h2>
-            <p className="text-sm leading-6 text-[#60738A]">
+            <KeyRound size={24} className="text-[#8AA0B8]" />
+            <h2 className="text-[15px] font-semibold text-[#102A43]">Nenhum armário encontrado</h2>
+            <p className="text-[13px] leading-5 text-[#60738A]">
               Ajuste a busca ou o filtro para visualizar outros armários cadastrados.
             </p>
           </div>
         </Panel>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
           {filtered.map((locker) => {
             const active = activeByLockerId.get(locker.id);
             return (
@@ -391,7 +391,7 @@ export function Lockers() {
         <div className="space-y-4">
           {allocErr ? <Alert>{allocErr}</Alert> : null}
 
-          <div className="rounded border border-[#D9E2EC] bg-[#F7FAFD] p-3 text-sm">
+          <div className="rounded border border-[#D9E2EC] bg-[#F7FAFD] p-3 text-[13px] leading-5">
             <div className="text-[#60738A]">Armário</div>
             <div className="font-semibold text-[#102A43]">{allocLocker ? lockerLabel(allocLocker) : "-"}</div>
             <div className="mt-1 text-xs text-[#60738A]">Devolução prevista automática: agora + 6 meses</div>
@@ -472,15 +472,15 @@ function LockerCard({
 }) {
   return (
     <Panel className={`relative border-t-4 ${statusAccent(locker.status)} transition hover:border-[#B7C7D8]`}>
-      <div className="flex items-start justify-between gap-4 border-b border-[#E8EDF3] p-4">
+      <div className="flex items-start justify-between gap-3.5 border-b border-[#E8EDF3] p-3.5">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold tracking-[-0.01em] text-[#102A43]">
+            <h2 className="text-[15px] font-semibold leading-6 text-[#102A43]">
               Chave {locker.keyNumber}
             </h2>
             <StatusBadge status={locker.status} />
           </div>
-          <div className="mt-1 text-sm text-[#60738A]">{locker.floor}º andar</div>
+          <div className="mt-0.5 text-[13px] leading-5 text-[#60738A]">{locker.floor}º andar</div>
         </div>
 
         <LockerActionMenu
@@ -497,7 +497,7 @@ function LockerCard({
         />
       </div>
 
-      <div className="space-y-4 p-4">
+      <div className="space-y-3.5 p-3.5">
         <InfoRow
           icon={<KeyRound size={16} />}
           label="Laboratório"
@@ -519,8 +519,8 @@ function LockerCard({
         />
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-[#E8EDF3] bg-[#F8FAFC] px-4 py-3">
-        <div className="text-xs font-medium text-[#60738A]">
+      <div className="flex items-center justify-between gap-3 border-t border-[#E8EDF3] bg-[#F8FAFC] px-3.5 py-2.5">
+        <div className="text-[11px] font-medium leading-4 text-[#60738A]">
           {active ? "Armário em uso" : locker.status === "MAINTENANCE" ? "Indisponível para alocação" : "Pronto para alocação"}
         </div>
         <PrimaryAction locker={locker} onAllocate={onAllocate} onReturn={onReturn} onFree={onFree} />
@@ -542,7 +542,7 @@ function PrimaryAction({
 }) {
   if (locker.status === "FREE") {
     return (
-      <Button variant="primary" className="min-h-8 px-3 py-1.5 text-xs" onClick={onAllocate}>
+      <Button variant="primary" className="min-h-7 px-2.5 py-1 text-[12px] leading-4" onClick={onAllocate}>
         Alocar
       </Button>
     );
@@ -550,14 +550,14 @@ function PrimaryAction({
 
   if (locker.status === "OCCUPIED") {
     return (
-      <Button variant="secondary" className="min-h-8 px-3 py-1.5 text-xs" onClick={onReturn}>
+      <Button variant="secondary" className="min-h-7 px-2.5 py-1 text-[12px] leading-4" onClick={onReturn}>
         Registrar devolução
       </Button>
     );
   }
 
   return (
-    <Button variant="secondary" className="min-h-8 px-3 py-1.5 text-xs" onClick={onFree}>
+    <Button variant="secondary" className="min-h-7 px-2.5 py-1 text-[12px] leading-4" onClick={onFree}>
       Marcar livre
     </Button>
   );
@@ -575,11 +575,11 @@ function InfoRow({
   muted?: boolean;
 }) {
   return (
-    <div className="flex gap-3">
+    <div className="flex gap-2.5">
       <div className="mt-0.5 text-[#8AA0B8]">{icon}</div>
       <div className="min-w-0">
-        <div className="text-xs font-semibold uppercase tracking-[0.05em] text-[#60738A]">{label}</div>
-        <div className={`mt-0.5 truncate text-sm ${muted ? "text-[#8AA0B8]" : "font-medium text-[#24364B]"}`}>
+        <div className="text-[11px] font-semibold uppercase leading-4 tracking-[0.05em] text-[#60738A]">{label}</div>
+        <div className={`mt-0.5 truncate text-[13px] leading-5 ${muted ? "text-[#8AA0B8]" : "font-medium text-[#24364B]"}`}>
           {value}
         </div>
       </div>
@@ -647,7 +647,7 @@ function LockerActionMenu({
     <div ref={menuRef} className="relative shrink-0">
       <button
         type="button"
-        className={`inline-flex h-8 items-center gap-1.5 rounded border px-2.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#0F62A8]/15 ${
+        className={`inline-flex h-7 items-center gap-1.5 rounded border px-2.5 text-[12px] font-semibold leading-4 transition focus:outline-none focus:ring-2 focus:ring-[#0F62A8]/15 ${
           open
             ? "border-[#0F62A8] bg-[#EDF4FB] text-[#0F62A8]"
             : "border-[#C8D4E1] bg-white text-[#40516A] hover:border-[#AFC0D2] hover:bg-[#F6F8FA]"
@@ -656,16 +656,16 @@ function LockerActionMenu({
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <MoreHorizontal size={15} />
+        <MoreHorizontal size={14} />
         Mais ações
       </button>
 
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 top-full z-50 mt-2 w-64 overflow-hidden rounded-md border border-[#C8D4E1] bg-white p-1 text-sm shadow-[0_16px_36px_rgba(15,23,42,0.16)]"
+          className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-md border border-[#C8D4E1] bg-white p-1 text-[13px] leading-5 shadow-[0_16px_36px_rgba(15,23,42,0.16)]"
         >
-          <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[#60738A]">
+          <div className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[#60738A]">
             Ações do armário
           </div>
           <div className="mb-1 border-t border-[#E8EDF3]" />
@@ -712,7 +712,7 @@ function MenuButton({
     <button
       type="button"
       role="menuitem"
-      className={`flex w-full items-center gap-2 rounded px-2.5 py-2 text-left transition ${toneClass}`}
+      className={`flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-[13px] leading-5 transition ${toneClass}`}
       onClick={onClick}
     >
       <span className="flex w-4 justify-center text-current/70">{icon}</span>
@@ -723,7 +723,7 @@ function MenuButton({
 
 function LockerGridSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+    <div className="grid grid-cols-1 gap-3.5 md:grid-cols-2 2xl:grid-cols-3">
       {Array.from({ length: 6 }).map((_, index) => (
         <Panel key={index} className="border-t-4 border-t-[#D9E2EC] p-4">
           <div className="h-5 w-32 animate-pulse rounded-sm bg-[#E8EDF3]" />

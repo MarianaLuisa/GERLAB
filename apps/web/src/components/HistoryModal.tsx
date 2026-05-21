@@ -65,9 +65,9 @@ export function HistoryModal({ open, onClose, locker }: Props) {
       <div className="space-y-4">
         {err ? <Alert>{err}</Alert> : null}
 
-        <div className="rounded border border-[#D9E2EC] bg-[#F7FAFD] p-3 text-sm">
-          <div className="text-[#667085]">Registros encontrados</div>
-          <div className="mt-1 text-xl font-semibold text-[#0A376A]">
+        <div className="rounded border border-[#D9E2EC] bg-[#F7FAFD] p-3 text-[13px] leading-5">
+          <div className="text-[12px] text-[#667085]">Registros encontrados</div>
+          <div className="mt-1 text-lg font-semibold leading-6 text-[#0A376A]">
             {loading ? "Carregando..." : items.length}
           </div>
         </div>

@@ -231,6 +231,13 @@ to_insert AS (
     NOW() AS "updatedAt",
     situation
   FROM joined
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM "Allocation" a
+    WHERE a."userId" = joined."userId"
+      AND a."lockerId" = joined."lockerId"
+      AND a."startAt" = joined.startDate::timestamp
+  )
 )
 INSERT INTO "Allocation" (id, "userId", "lockerId", "startAt", "dueAt", "endAt", "createdAt", "updatedAt")
 SELECT id, "userId", "lockerId", "startAt", "dueAt", "endAt", "createdAt", "updatedAt"
@@ -303,6 +310,37 @@ SET
   "updatedAt" = NOW()
 FROM joined j
 WHERE l.id = j."lockerId";
+
+-- Reconcilia estado final pela regra oficial:
+-- somente Allocation com endAt IS NULL é alocação ativa.
+WITH active AS (
+  SELECT DISTINCT ON (a."lockerId")
+    a."lockerId",
+    a."userId"
+  FROM "Allocation" a
+  WHERE a."endAt" IS NULL
+  ORDER BY a."lockerId", a."startAt" DESC, a."createdAt" DESC, a.id DESC
+)
+UPDATE "Locker" l
+SET
+  status = 'OCCUPIED'::"LockerStatus",
+  "currentUserId" = active."userId",
+  "updatedAt" = NOW()
+FROM active
+WHERE l.id = active."lockerId";
+
+UPDATE "Locker" l
+SET
+  status = 'FREE'::"LockerStatus",
+  "currentUserId" = NULL,
+  "updatedAt" = NOW()
+WHERE l.status <> 'MAINTENANCE'::"LockerStatus"
+  AND NOT EXISTS (
+    SELECT 1
+    FROM "Allocation" a
+    WHERE a."lockerId" = l.id
+      AND a."endAt" IS NULL
+  );
 
 -- =========================================================
 -- 4) Audit log

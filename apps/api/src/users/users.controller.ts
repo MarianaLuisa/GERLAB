@@ -9,11 +9,11 @@ import {
   Post,
   Req,
   UseGuards,
-} from "@nestjs/common";
-import { IsEmail, IsOptional, IsString } from "class-validator";
-import { AuthGuard } from "../auth/auth.guard";
-import { PrismaService } from "../prisma/prisma.service";
-import { Prisma } from "@prisma/client";
+} from '@nestjs/common';
+import { IsEmail, IsOptional, IsString } from 'class-validator';
+import { AuthGuard } from '../auth/auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 class CreateUserDto {
   @IsString()
@@ -41,20 +41,20 @@ class UpdateUserDto {
   phone?: string;
 }
 
-@Controller("users")
+@Controller('users')
 @UseGuards(AuthGuard)
 export class UsersController {
   constructor(private prisma: PrismaService) {}
 
   @Get()
   async list() {
-    return this.prisma.user.findMany({ orderBy: { name: "asc" } });
+    return this.prisma.user.findMany({ orderBy: { name: 'asc' } });
   }
 
-  @Get(":id")
-  async get(@Param("id") id: string) {
+  @Get(':id')
+  async get(@Param('id') id: string) {
     const u = await this.prisma.user.findUnique({ where: { id } });
-    if (!u) throw new BadRequestException("Usuário não encontrado.");
+    if (!u) throw new BadRequestException('Usuário não encontrado.');
     return u;
   }
 
@@ -64,8 +64,8 @@ export class UsersController {
     const email = dto.email.trim().toLowerCase();
     const phone = dto.phone?.trim() || null;
 
-    if (!name) throw new BadRequestException("Informe o nome.");
-    if (!email) throw new BadRequestException("Informe o e-mail.");
+    if (!name) throw new BadRequestException('Informe o nome.');
+    if (!email) throw new BadRequestException('Informe o e-mail.');
 
     try {
       const u = await this.prisma.user.create({
@@ -77,8 +77,8 @@ export class UsersController {
         data: {
           actorEmail: req.userEmail ?? null,
           actorName: req.userEmail ?? null,
-          action: "DATA_IMPORT",
-          entity: "USER",
+          action: 'DATA_IMPORT',
+          entity: 'USER',
           entityId: u.id,
           details: `Usuário criado: ${u.name} (${u.email})`,
         },
@@ -86,25 +86,34 @@ export class UsersController {
 
       return u;
     } catch (e: any) {
-  if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-    throw new BadRequestException("Já existe um usuário com este e-mail.");
-  }
-  throw e;
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new BadRequestException('Já existe um usuário com este e-mail.');
+      }
+      throw e;
     }
   }
 
-  @Patch(":id")
-  async update(@Req() req: any, @Param("id") id: string, @Body() dto: UpdateUserDto) {
+  @Patch(':id')
+  async update(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+  ) {
     const existing = await this.prisma.user.findUnique({ where: { id } });
-    if (!existing) throw new BadRequestException("Usuário não encontrado.");
+    if (!existing) throw new BadRequestException('Usuário não encontrado.');
 
     const data: any = {};
     if (dto.name !== undefined) data.name = dto.name.trim();
     if (dto.email !== undefined) data.email = dto.email.trim().toLowerCase();
     if (dto.phone !== undefined) data.phone = dto.phone.trim() || null;
 
-    if (data.name !== undefined && !data.name) throw new BadRequestException("Nome inválido.");
-    if (data.email !== undefined && !data.email) throw new BadRequestException("E-mail inválido.");
+    if (data.name !== undefined && !data.name)
+      throw new BadRequestException('Nome inválido.');
+    if (data.email !== undefined && !data.email)
+      throw new BadRequestException('E-mail inválido.');
 
     try {
       const u = await this.prisma.user.update({ where: { id }, data });
@@ -113,8 +122,8 @@ export class UsersController {
         data: {
           actorEmail: req.userEmail ?? null,
           actorName: req.userEmail ?? null,
-          action: "DATA_IMPORT",
-          entity: "USER",
+          action: 'DATA_IMPORT',
+          entity: 'USER',
           entityId: id,
           details: `Usuário atualizado: ${u.name} (${u.email})`,
         },
@@ -122,26 +131,32 @@ export class UsersController {
 
       return u;
     } catch {
-      throw new BadRequestException("E-mail já está em uso por outro usuário.");
+      throw new BadRequestException('E-mail já está em uso por outro usuário.');
     }
   }
 
-  @Delete(":id")
-  async remove(@Req() req: any, @Param("id") id: string) {
+  @Delete(':id')
+  async remove(@Req() req: any, @Param('id') id: string) {
     const u = await this.prisma.user.findUnique({ where: { id } });
-    if (!u) throw new BadRequestException("Usuário não encontrado.");
+    if (!u) throw new BadRequestException('Usuário não encontrado.');
 
     const active = await this.prisma.allocation.findFirst({
       where: { userId: id, endAt: null },
       select: { id: true },
     });
-    if (active) throw new BadRequestException("Não é possível excluir: usuário possui alocação ativa.");
+    if (active)
+      throw new BadRequestException(
+        'Não é possível excluir: usuário possui alocação ativa.',
+      );
 
     const anyHistory = await this.prisma.allocation.findFirst({
       where: { userId: id },
       select: { id: true },
     });
-    if (anyHistory) throw new BadRequestException("Não é possível excluir: usuário já utilizou armários e possui histórico.");
+    if (anyHistory)
+      throw new BadRequestException(
+        'Não é possível excluir: usuário já utilizou armários e possui histórico.',
+      );
 
     await this.prisma.user.delete({ where: { id } });
 
@@ -149,8 +164,8 @@ export class UsersController {
       data: {
         actorEmail: req.userEmail ?? null,
         actorName: req.userEmail ?? null,
-        action: "DATA_IMPORT",
-        entity: "USER",
+        action: 'DATA_IMPORT',
+        entity: 'USER',
         entityId: id,
         details: `Usuário removido: ${u.name} (${u.email})`,
       },

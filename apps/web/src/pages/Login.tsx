@@ -35,34 +35,34 @@ export function Login() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F5F7FA] px-5 py-8">
       <div className="grid w-full max-w-5xl overflow-hidden rounded-md border border-[#D9E2EC] bg-white lg:grid-cols-[0.95fr_1.05fr]">
-        <section className="flex min-h-[520px] flex-col justify-between bg-[#052B4F] p-8 text-white lg:p-10">
+        <section className="flex min-h-[500px] flex-col justify-between bg-[#052B4F] p-7 text-white lg:p-9">
           <div>
             <div className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-100/75">
               Acesso institucional
             </div>
-            <h1 className="mt-7 text-4xl font-semibold tracking-[-0.02em]">
+            <h1 className="mt-6 text-[2.15rem] font-semibold leading-tight">
               GERLAB
             </h1>
-            <p className="mt-4 max-w-md text-base leading-7 text-blue-50/78">
+            <p className="mt-3 max-w-md text-[15px] leading-6 text-blue-50/78">
               Sistema de Gestão de Acessos aos Armários da PROPPGI/UFCSPA.
             </p>
           </div>
 
-          <div className="border-t border-white/12 pt-5 text-sm leading-6 text-blue-50/76">
+          <div className="border-t border-white/12 pt-4 text-[13px] leading-5 text-blue-50/76">
             Gestão centralizada, auditoria e conformidade para uso institucional.
           </div>
         </section>
 
-        <section className="flex flex-col justify-center p-7 sm:p-10">
-          <div className="mb-8 flex items-center justify-center gap-5">
-            <img src={logo} alt="PROPPGI" className="h-14 w-auto object-contain" />
+        <section className="flex flex-col justify-center p-7 sm:p-9">
+          <div className="mb-7 flex items-center justify-center gap-5">
+            <img src={logo} alt="PROPPGI" className="h-12 w-auto object-contain" />
             <div className="h-10 w-px bg-[#D9E2EC]" />
-            <img src={logoUfcspa} alt="UFCSPA" className="h-14 w-auto object-contain" />
+            <img src={logoUfcspa} alt="UFCSPA" className="h-12 w-auto object-contain" />
           </div>
 
-          <div className="mb-6">
-            <h2 className="text-2xl font-semibold tracking-[-0.01em] text-[#102A43]">Entrar no sistema</h2>
-            <p className="mt-1 text-sm text-[#60738A]">
+          <div className="mb-5">
+            <h2 className="text-[1.35rem] font-semibold leading-7 text-[#102A43]">Entrar no sistema</h2>
+            <p className="mt-1 text-[13px] text-[#60738A]">
               Use seu e-mail institucional autorizado.
             </p>
           </div>
@@ -92,7 +92,7 @@ export function Login() {
             </Button>
           </div>
 
-          <p className="mt-6 text-xs leading-5 text-[#60738A]">
+          <p className="mt-5 text-[11px] leading-4 text-[#60738A]">
             Acesso restrito a e-mails autorizados. Conformidade LGPD.
           </p>
         </section>

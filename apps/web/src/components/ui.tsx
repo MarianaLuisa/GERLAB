@@ -15,17 +15,17 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="border-b border-[#D9E2EC] pb-5">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <div className="border-b border-[#D9E2EC] pb-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#60738A]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#60738A]">
           GERLAB
         </p>
-        <h1 className="mt-1 text-[1.55rem] font-semibold leading-tight tracking-[-0.01em] text-[#102A43]">
+        <h1 className="mt-1 text-[1.38rem] font-semibold leading-snug text-[#102A43]">
           {title}
         </h1>
         {description ? (
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-[#5F6F82]">
+          <p className="mt-1 max-w-2xl text-[13px] leading-5 text-[#5F6F82]">
             {description}
           </p>
         ) : null}
@@ -46,10 +46,10 @@ export function SectionHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-[#E2E8F0] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-2.5 border-b border-[#E2E8F0] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h2 className="text-sm font-semibold text-[#102A43]">{title}</h2>
-        {description ? <p className="mt-0.5 text-xs leading-5 text-[#60738A]">{description}</p> : null}
+        <h2 className="text-[13px] font-semibold leading-5 text-[#102A43]">{title}</h2>
+        {description ? <p className="mt-0.5 text-[12px] leading-4 text-[#60738A]">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap gap-2 sm:justify-end">{actions}</div> : null}
     </div>
@@ -100,7 +100,7 @@ export function Button({
     <button
       {...props}
       className={cx(
-        "inline-flex min-h-9 items-center justify-center gap-2 rounded border px-3.5 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 disabled:opacity-50",
+        "inline-flex min-h-8 items-center justify-center gap-1.5 rounded border px-3 py-1.5 text-[13px] font-semibold leading-5 transition focus:outline-none focus:ring-2 disabled:opacity-50",
         variants[variant],
         className
       )}
@@ -121,7 +121,7 @@ export function Field({
 }) {
   return (
     <label className="block space-y-1.5">
-      <span className="text-sm font-medium text-[#344054]">{label}</span>
+      <span className="text-[13px] font-medium leading-5 text-[#344054]">{label}</span>
       {children}
       {hint ? <span className="block text-xs text-[#7A8798]">{hint}</span> : null}
     </label>
@@ -129,7 +129,7 @@ export function Field({
 }
 
 const controlClass =
-  "w-full rounded border border-[#C8D4E1] bg-white px-3 py-2.5 text-sm text-[#1D2939] outline-none transition placeholder:text-[#98A2B3] hover:border-[#9FB4CA] focus:border-[#0F62A8] focus:ring-2 focus:ring-[#0F62A8]/15";
+  "w-full rounded border border-[#C8D4E1] bg-white px-3 py-2 text-[13px] leading-5 text-[#1D2939] outline-none transition placeholder:text-[#98A2B3] hover:border-[#9FB4CA] focus:border-[#0F62A8] focus:ring-2 focus:ring-[#0F62A8]/15";
 
 export function TextInput({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(controlClass, className)} />;
@@ -158,13 +158,13 @@ export function Alert({
   return (
     <div
       className={cx(
-        "flex items-start gap-2 rounded-md border px-3 py-3 text-sm",
+        "flex items-start gap-2 rounded-md border px-3 py-2.5 text-[13px] leading-5",
         type === "success"
           ? "border-emerald-200 bg-emerald-50 text-emerald-800"
           : "border-red-200 bg-red-50 text-red-700"
       )}
     >
-      <Icon size={17} className="mt-0.5 shrink-0" />
+      <Icon size={16} className="mt-0.5 shrink-0" />
       <div>{children}</div>
     </div>
   );
@@ -182,7 +182,7 @@ export function StatusBadge({ status }: { status: LockerStatus }) {
     MAINTENANCE: "Manutenção",
   };
   return (
-    <span className={cx("inline-flex items-center rounded-sm px-2 py-0.5 text-xs font-semibold ring-1 ring-inset", map[status])}>
+    <span className={cx("inline-flex items-center rounded-sm px-2 py-0.5 text-[11px] font-semibold leading-4 ring-1 ring-inset", map[status])}>
       {label[status]}
     </span>
   );
@@ -196,10 +196,10 @@ export function DataToolbar({
   meta?: ReactNode;
 }) {
   return (
-    <Panel className="p-4">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <Panel className="p-3.5">
+      <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1">{children}</div>
-        {meta ? <div className="shrink-0 text-sm text-[#60738A]">{meta}</div> : null}
+        {meta ? <div className="shrink-0 text-[13px] text-[#60738A]">{meta}</div> : null}
       </div>
     </Panel>
   );
@@ -207,7 +207,7 @@ export function DataToolbar({
 
 export function CountBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex items-center rounded-sm border border-[#D9E2EC] bg-[#F8FAFC] px-2.5 py-1 text-xs font-semibold text-[#526579]">
+    <span className="inline-flex items-center rounded-sm border border-[#D9E2EC] bg-[#F8FAFC] px-2 py-0.5 text-[11px] font-semibold leading-4 text-[#526579]">
       {children}
     </span>
   );
@@ -224,7 +224,7 @@ export function TableShell({ children, className }: { children: ReactNode; class
 export function EmptyCell({ children, colSpan }: { children: ReactNode; colSpan: number }) {
   return (
     <tr>
-      <td className="px-5 py-12 text-center text-sm text-[#60738A]" colSpan={colSpan}>
+      <td className="px-5 py-10 text-center text-[13px] text-[#60738A]" colSpan={colSpan}>
         <div className="flex flex-col items-center gap-2">
           <Inbox size={22} className="text-[#8AA0B8]" />
           <span>{children}</span>
@@ -253,15 +253,15 @@ export function MetricCard({
   };
 
   return (
-    <Panel className={cx("border-l-4 p-4", accents[accent])}>
-      <div className="text-xs font-semibold uppercase tracking-[0.06em] text-[#60738A]">{title}</div>
-      <div className="mt-2 text-2xl font-semibold tracking-[-0.01em] text-[#102A43]">{value}</div>
-      {description ? <div className="mt-1 text-xs leading-5 text-[#60738A]">{description}</div> : null}
+    <Panel className={cx("border-l-4 p-3.5", accents[accent])}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#60738A]">{title}</div>
+      <div className="mt-1.5 text-[1.35rem] font-semibold leading-7 text-[#102A43]">{value}</div>
+      {description ? <div className="mt-1 text-[12px] leading-4 text-[#60738A]">{description}</div> : null}
     </Panel>
   );
 }
 
-export const tableClass = "min-w-full text-sm";
+export const tableClass = "min-w-full text-[13px]";
 export const theadClass = "border-b border-[#D9E2EC] bg-[#F6F8FA] text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-[#526579]";
-export const thClass = "px-4 py-3";
-export const tdClass = "border-b border-[#E8EDF3] px-4 py-3 align-middle";
+export const thClass = "px-4 py-2.5";
+export const tdClass = "border-b border-[#E8EDF3] px-4 py-2.5 align-middle";

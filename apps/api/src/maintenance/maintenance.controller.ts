@@ -1,47 +1,94 @@
-import { Controller, Post, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "../auth/auth.guard";
-import { PrismaService } from "../prisma/prisma.service";
+import { Controller, Post, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../auth/auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
+import { reconcileLockerState } from '../allocations/allocation-integrity';
 
-@Controller("maintenance")
+@Controller('maintenance')
 @UseGuards(AuthGuard)
 export class MaintenanceController {
   constructor(private prisma: PrismaService) {}
 
-  @Post("reconcile")
+  @Post('reconcile')
   async reconcile() {
-    const lockers = await this.prisma.locker.findMany();
-    let fixed = 0;
+    const endedAt = new Date();
+    let fixedLockers = 0;
+    let endedDuplicateAllocations = 0;
 
-    for (const l of lockers) {
-      const active = await this.prisma.allocation.findFirst({
-        where: { lockerId: l.id, endAt: null },
-        include: { user: true },
+    const maintenanceLockersWithActive = await this.prisma.locker.findMany({
+      where: { status: 'MAINTENANCE', allocations: { some: { endAt: null } } },
+      select: { id: true },
+    });
+
+    for (const locker of maintenanceLockersWithActive) {
+      const result = await this.prisma.allocation.updateMany({
+        where: { lockerId: locker.id, endAt: null },
+        data: {
+          endAt: endedAt,
+          cancelReason: 'Encerrada por reconciliação: armário em manutenção.',
+        },
       });
 
-      // se está em manutenção, respeita manutenção (não mexe)
-      if (l.status === "MAINTENANCE") continue;
+      endedDuplicateAllocations += result.count;
+      await this.prisma.locker.update({
+        where: { id: locker.id },
+        data: { currentUserId: null },
+      });
+    }
 
-      if (active) {
-        // deveria estar ocupado com user
-        if (l.status !== "OCCUPIED" || l.currentUserId !== active.userId) {
-          await this.prisma.locker.update({
-            where: { id: l.id },
-            data: { status: "OCCUPIED", currentUserId: active.userId },
-          });
-          fixed++;
-        }
+    endedDuplicateAllocations += await this.endDuplicateActiveAllocations(
+      'lockerId',
+      endedAt,
+    );
+    endedDuplicateAllocations += await this.endDuplicateActiveAllocations(
+      'userId',
+      endedAt,
+    );
+
+    const lockers = await this.prisma.locker.findMany();
+    for (const locker of lockers) {
+      const before = `${locker.status}:${locker.currentUserId ?? ''}`;
+      const state = await this.prisma.$transaction((tx) =>
+        reconcileLockerState(tx, locker.id),
+      );
+      const after = `${state?.status ?? locker.status}:${state?.currentUserId ?? ''}`;
+      if (before !== after) fixedLockers++;
+    }
+
+    return { ok: true, fixed: fixedLockers, endedDuplicateAllocations };
+  }
+
+  private async endDuplicateActiveAllocations(
+    groupField: 'lockerId' | 'userId',
+    endedAt: Date,
+  ) {
+    const active = await this.prisma.allocation.findMany({
+      where: { endAt: null },
+      orderBy: [{ startAt: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+      select: { id: true, lockerId: true, userId: true },
+    });
+
+    const seen = new Set<string>();
+    const duplicateIds: string[] = [];
+
+    for (const allocation of active) {
+      const groupId = allocation[groupField];
+      if (seen.has(groupId)) {
+        duplicateIds.push(allocation.id);
       } else {
-        // deveria estar livre
-        if (l.status !== "FREE" || l.currentUserId !== null) {
-          await this.prisma.locker.update({
-            where: { id: l.id },
-            data: { status: "FREE", currentUserId: null },
-          });
-          fixed++;
-        }
+        seen.add(groupId);
       }
     }
 
-    return { ok: true, fixed };
+    if (duplicateIds.length === 0) return 0;
+
+    const result = await this.prisma.allocation.updateMany({
+      where: { id: { in: duplicateIds }, endAt: null },
+      data: {
+        endAt: endedAt,
+        cancelReason: 'Encerrada por reconciliação: alocação ativa duplicada.',
+      },
+    });
+
+    return result.count;
   }
 }

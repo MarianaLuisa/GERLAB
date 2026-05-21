@@ -1,14 +1,17 @@
-import { Controller, Get, Query, UseGuards } from "@nestjs/common";
-import { AuthGuard } from "../auth/auth.guard";
-import { PrismaService } from "../prisma/prisma.service";
+import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { AuthGuard } from '../auth/auth.guard';
+import { PrismaService } from '../prisma/prisma.service';
 
-@Controller("audit")
+@Controller('audit')
 @UseGuards(AuthGuard)
 export class AuditController {
   constructor(private prisma: PrismaService) {}
 
   @Get()
-  async list(@Query("fromISO") fromISO?: string, @Query("toISO") toISO?: string) {
+  async list(
+    @Query('fromISO') fromISO?: string,
+    @Query('toISO') toISO?: string,
+  ) {
     return this.prisma.auditLog.findMany({
       where: {
         createdAt: {
@@ -16,7 +19,7 @@ export class AuditController {
           lte: toISO ? new Date(toISO) : undefined,
         },
       },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

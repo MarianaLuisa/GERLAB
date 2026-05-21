@@ -98,7 +98,7 @@ export function Settings() {
     }
   }
 
-  if (loading) return <div className="text-sm text-[#60738A]">Carregando...</div>;
+  if (loading) return <div className="text-[13px] text-[#60738A]">Carregando...</div>;
   if (err && !f) return <Alert>{err}</Alert>;
   if (!f) return null;
 
@@ -118,7 +118,7 @@ export function Settings() {
       {err ? <Alert>{err}</Alert> : null}
       {ok ? <Alert type="success">{ok}</Alert> : null}
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3.5 xl:grid-cols-2">
         <SettingsCard title="Regras de alocação" desc="Prazo padrão, renovação e limites.">
           <SettingsRow label="Prazo padrão (meses)">
             <TextInput type="number" min={1} value={f.allocationMonths} onChange={(e) => set("allocationMonths", Number(e.target.value))} />
@@ -166,7 +166,7 @@ function SettingsCard({ title, desc, children }: { title: string; desc: string; 
   return (
     <Panel>
       <SectionHeader title={title} description={desc} />
-      <div className="space-y-4 p-5">{children}</div>
+      <div className="space-y-3.5 p-4">{children}</div>
     </Panel>
   );
 }
@@ -174,7 +174,7 @@ function SettingsCard({ title, desc, children }: { title: string; desc: string; 
 function SettingsRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-3 md:items-center">
-      <div className="text-sm font-medium text-[#344054]">{label}</div>
+      <div className="text-[13px] font-medium leading-5 text-[#344054]">{label}</div>
       <div className="md:col-span-2">{children}</div>
     </div>
   );
@@ -185,7 +185,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
     <button
       type="button"
       onClick={() => onChange(!value)}
-      className={`inline-flex min-w-24 items-center justify-center rounded border px-3 py-2 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#0F62A8]/15 ${
+      className={`inline-flex min-w-20 items-center justify-center rounded border px-3 py-1.5 text-[13px] font-semibold leading-5 transition focus:outline-none focus:ring-2 focus:ring-[#0F62A8]/15 ${
         value
           ? "border-[#0F62A8] bg-[#0F62A8] text-white"
           : "border-[#C8D4E1] bg-white text-[#40516A] hover:bg-[#F6F8FA]"

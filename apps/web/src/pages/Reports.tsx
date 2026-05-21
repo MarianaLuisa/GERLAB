@@ -155,8 +155,8 @@ export function Reports() {
       {err ? <Alert>{err}</Alert> : null}
 
       <DataToolbar meta={<CountBadge>{loading ? "Carregando..." : `${filtered.length} registros`}</CountBadge>}>
-        <div className="grid gap-3 xl:grid-cols-[1fr_auto] xl:items-end">
-          <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-2.5 xl:grid-cols-[1fr_auto] xl:items-end">
+          <div className="grid gap-2.5 md:grid-cols-2">
             <Field label="De">
               <TextInput type="datetime-local" value={from} onChange={(e) => setFrom(e.target.value)} />
             </Field>
@@ -224,22 +224,22 @@ export function Reports() {
         </table>
 
         {!loading && filtered.length > 0 ? (
-          <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2.5 px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs font-medium text-[#60738A]">
               Página {page} de {totalPages}
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={() => setPage(1)} disabled={page === 1} className="min-h-8 px-3 py-1 text-xs">
+              <Button onClick={() => setPage(1)} disabled={page === 1} className="min-h-7 px-2.5 py-1 text-[12px] leading-4">
                 Início
               </Button>
-              <Button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="min-h-8 px-3 py-1 text-xs">
+              <Button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="min-h-7 px-2.5 py-1 text-[12px] leading-4">
                 Anterior
               </Button>
-              <Button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="min-h-8 px-3 py-1 text-xs">
+              <Button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="min-h-7 px-2.5 py-1 text-[12px] leading-4">
                 Próxima
               </Button>
-              <Button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="min-h-8 px-3 py-1 text-xs">
+              <Button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="min-h-7 px-2.5 py-1 text-[12px] leading-4">
                 Fim
               </Button>
             </div>

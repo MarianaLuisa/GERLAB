@@ -141,9 +141,9 @@ export function Users() {
       {err ? <Alert>{err}</Alert> : null}
 
       <DataToolbar meta={<CountBadge>{loading ? "Carregando..." : `${filtered.length} usuários`}</CountBadge>}>
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+        <div className="flex flex-col gap-2.5 md:flex-row md:items-center">
           <div className="relative w-full md:max-w-lg">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]" size={17} />
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#98A2B3]" size={16} />
             <TextInput
               type="text"
               placeholder="Buscar por nome, e-mail, telefone..."
@@ -184,10 +184,10 @@ export function Users() {
                   <td className={`${tdClass} text-[#60738A]`}>{u.phone ?? "-"}</td>
                   <td className={`${tdClass} text-right`}>
                     <div className="flex flex-wrap justify-end gap-2">
-                      <Button variant="ghost" className="min-h-8 px-2.5 py-1 text-xs" onClick={() => openEdit(u)}>
+                      <Button variant="ghost" className="min-h-7 px-2.5 py-1 text-[12px] leading-4" onClick={() => openEdit(u)}>
                         Editar
                       </Button>
-                      <Button variant="danger" className="min-h-8 px-2.5 py-1 text-xs" onClick={() => remove(u)}>
+                      <Button variant="danger" className="min-h-7 px-2.5 py-1 text-[12px] leading-4" onClick={() => remove(u)}>
                         Excluir
                       </Button>
                     </div>

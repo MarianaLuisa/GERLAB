@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaService } from "../prisma/prisma.service";
-import nodemailer from "nodemailer";
-import type { NotificationEvent, AuditEntity } from "@prisma/client";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import nodemailer from 'nodemailer';
+import type { NotificationEvent, AuditEntity } from '@prisma/client';
 
 type SendNotificationInput = {
   event: NotificationEvent;
@@ -17,8 +17,10 @@ type SendNotificationInput = {
 };
 
 function envBool(v: any) {
-  const s = String(v ?? "").toLowerCase().trim();
-  return s === "1" || s === "true" || s === "yes";
+  const s = String(v ?? '')
+    .toLowerCase()
+    .trim();
+  return s === '1' || s === 'true' || s === 'yes';
 }
 
 @Injectable()
@@ -50,20 +52,20 @@ export class NotificationsService {
   async send(input: SendNotificationInput) {
     // settings singleton (cria se não existir)
     const settings = await this.prisma.systemSettings.upsert({
-      where: { id: "singleton" },
-      create: { id: "singleton" },
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
       update: {},
     });
 
     // sempre grava outbox
     const outbox = await this.prisma.notificationOutbox.create({
       data: {
-        channel: "EMAIL",
+        channel: 'EMAIL',
         event: input.event,
         toEmail: input.toEmail.toLowerCase().trim(),
         subject: input.subject,
         body: input.body,
-        status: "PENDING",
+        status: 'PENDING',
         entity: input.entity,
         entityId: input.entityId ?? null,
       },
@@ -71,7 +73,7 @@ export class NotificationsService {
 
     // se notificações desligadas, mantém pendente
     if (!settings.notificationsEnabled) {
-      return { ok: true, outboxId: outbox.id, status: "PENDING" as const };
+      return { ok: true, outboxId: outbox.id, status: 'PENDING' as const };
     }
 
     // sem SMTP configurado: marca error (mas fica auditável)
@@ -79,11 +81,11 @@ export class NotificationsService {
       await this.prisma.notificationOutbox.update({
         where: { id: outbox.id },
         data: {
-          status: "ERROR",
-          error: "SMTP não configurado (defina SMTP_HOST/PORT/USER/PASS/FROM).",
+          status: 'ERROR',
+          error: 'SMTP não configurado (defina SMTP_HOST/PORT/USER/PASS/FROM).',
         },
       });
-      return { ok: false, outboxId: outbox.id, status: "ERROR" as const };
+      return { ok: false, outboxId: outbox.id, status: 'ERROR' as const };
     }
 
     // tenta enviar
@@ -99,14 +101,14 @@ export class NotificationsService {
       await this.prisma.$transaction(async (tx) => {
         await tx.notificationOutbox.update({
           where: { id: outbox.id },
-          data: { status: "SENT", sentAt: new Date(), error: null },
+          data: { status: 'SENT', sentAt: new Date(), error: null },
         });
 
         await tx.auditLog.create({
           data: {
             actorEmail: input.actorEmail ?? null,
             actorName: input.actorName ?? input.actorEmail ?? null,
-            action: "NOTIFICATION_SENT",
+            action: 'NOTIFICATION_SENT',
             entity: input.entity,
             entityId: input.entityId ?? null,
             details: `Notificação enviada (${input.event}) para ${outbox.toEmail}: ${outbox.subject}`,
@@ -114,13 +116,16 @@ export class NotificationsService {
         });
       });
 
-      return { ok: true, outboxId: outbox.id, status: "SENT" as const };
+      return { ok: true, outboxId: outbox.id, status: 'SENT' as const };
     } catch (e: any) {
       await this.prisma.notificationOutbox.update({
         where: { id: outbox.id },
-        data: { status: "ERROR", error: e?.message ?? "Falha ao enviar e-mail." },
+        data: {
+          status: 'ERROR',
+          error: e?.message ?? 'Falha ao enviar e-mail.',
+        },
       });
-      return { ok: false, outboxId: outbox.id, status: "ERROR" as const };
+      return { ok: false, outboxId: outbox.id, status: 'ERROR' as const };
     }
   }
 }
