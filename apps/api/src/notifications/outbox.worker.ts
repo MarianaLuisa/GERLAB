@@ -29,6 +29,14 @@ export class OutboxWorker implements OnModuleInit {
   }
 
   async flushOnce(limit = 25) {
+    const settings = await this.prisma.systemSettings.upsert({
+      where: { id: 'singleton' },
+      create: { id: 'singleton' },
+      update: {},
+    });
+
+    if (!settings.notificationsEnabled) return;
+
     const items = await this.prisma.notificationOutbox.findMany({
       where: { status: 'PENDING' },
       orderBy: { createdAt: 'asc' },

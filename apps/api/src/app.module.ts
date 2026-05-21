@@ -24,7 +24,6 @@ import { MaintenanceModule } from './maintenance/maintenance.module';
     ReportsModule,
     NotificationsModule,
     SettingsModule,
-    SettingsModule,
     MaintenanceModule,
   ],
   controllers: [MeController],

@@ -18,6 +18,7 @@ import { Modal } from "../components/Modal";
 import { Toast } from "../components/Toast";
 import { HistoryModal } from "../components/HistoryModal";
 import { api } from "../services/api";
+import { formatDateTime } from "../services/preferences";
 import type { Allocation, Locker, LockerStatus } from "../types/models";
 import {
   Alert,
@@ -45,12 +46,7 @@ function lockerLabel(l: Locker) {
 }
 
 function fmtDate(s?: string | null) {
-  if (!s) return "-";
-  try {
-    return new Date(s).toLocaleString();
-  } catch {
-    return "-";
-  }
+  return formatDateTime(s);
 }
 
 function statusAccent(status: LockerStatus) {
@@ -213,7 +209,7 @@ export function Lockers() {
       const active = activeByLockerId.get(locker.id);
       if (!active) throw new Error("Não há alocação ativa para este armário.");
       const r = await api.renewAllocation(active.id);
-      setToast(`Renovado! Nova devolução prevista: ${new Date(r.dueAt).toLocaleString()}`);
+      setToast(`Renovado! Nova devolução prevista: ${formatDateTime(r.dueAt)}`);
       await refresh();
     } catch (e: unknown) {
       setToast(errorMessage(e, "Erro ao renovar."));

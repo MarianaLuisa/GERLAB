@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, FileText, Filter, X } from "lucide-react";
 import { api } from "../services/api";
+import { formatDateTime } from "../services/preferences";
 import type { AuditLog } from "../types/models";
 import {
   Alert,
@@ -39,11 +40,7 @@ function toISOFromLocal(input: string): string | null {
 }
 
 function fmt(d: string) {
-  try {
-    return new Date(d).toLocaleString();
-  } catch {
-    return d;
-  }
+  return formatDateTime(d);
 }
 
 function safeActor(l: AuditRow) {

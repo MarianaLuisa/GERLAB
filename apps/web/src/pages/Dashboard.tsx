@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { api } from "../services/api";
+import { formatDateTime } from "../services/preferences";
 import type { Allocation, Locker } from "../types/models";
 import { Alert, Button, CountBadge, MetricCard, PageHeader, Panel, SectionHeader } from "../components/ui";
 
@@ -132,7 +133,7 @@ export function Dashboard() {
                     <div className="mt-1 truncate text-xs text-[#60738A]">{a.lockerLabel}</div>
                   </div>
                   <div className="shrink-0 text-right text-xs text-[#60738A]">
-                    {new Date(a.startAt).toLocaleString()}
+                    {formatDateTime(a.startAt)}
                   </div>
                 </div>
               ))}

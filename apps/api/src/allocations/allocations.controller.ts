@@ -212,14 +212,7 @@ export class AllocationsController {
         event: 'ALLOCATION_CREATED',
         entity: 'ALLOCATION',
         entityId: result.id,
-        toEmail:
-          (
-            await this.prisma.systemSettings.findUnique({
-              where: { id: 'singleton' },
-            })
-          )?.notificationToEmails
-            ?.split(',')[0]
-            ?.trim() || req.userEmail, // fallback
+        toEmail: undefined,
         subject: 'Nova alocação registrada',
         body: `Alocação criada.\nUsuário: ${result.user?.name}\nArmário: ${result.locker ? lockerLabel(result.locker) : ''}\nInício: ${new Date(result.startAt).toLocaleString('pt-BR')}\nPrevisto: ${result.dueAt ? new Date(result.dueAt).toLocaleString('pt-BR') : '-'}`,
         actorEmail: req.userEmail ?? null,
@@ -266,7 +259,7 @@ export class AllocationsController {
         event: 'ALLOCATION_ENDED',
         entity: 'ALLOCATION',
         entityId: id,
-        toEmail: req.userEmail ?? 'msbrasil@ufcspa.edu.br',
+        toEmail: undefined,
         subject: 'Devolução registrada',
         body: `Devolução registrada.\nUsuário: ${a.user?.name}\nArmário: ${a.locker ? lockerLabel(a.locker) : ''}\nQuando: ${endedAt.toLocaleString('pt-BR')}`,
         actorEmail: req.userEmail ?? null,
@@ -328,7 +321,7 @@ export class AllocationsController {
         event: 'ALLOCATION_RENEWED',
         entity: 'ALLOCATION',
         entityId: id,
-        toEmail: req.userEmail ?? 'msbrasil@ufcspa.edu.br',
+        toEmail: undefined,
         subject: 'Alocação renovada',
         body: `Renovação registrada.\nUsuário: ${updated.user?.name}\nArmário: ${updated.locker ? lockerLabel(updated.locker) : ''}\nNovo prazo: ${nextDue.toLocaleString('pt-BR')}`,
         actorEmail: req.userEmail ?? null,
@@ -382,7 +375,7 @@ export class AllocationsController {
         event: 'ALLOCATION_CANCELLED',
         entity: 'ALLOCATION',
         entityId: id,
-        toEmail: req.userEmail ?? 'msbrasil@ufcspa.edu.br',
+        toEmail: undefined,
         subject: 'Alocação cancelada',
         body: `Cancelamento registrado.\nUsuário: ${a.user?.name}\nArmário: ${a.locker ? lockerLabel(a.locker) : ''}\nMotivo: ${reason}`,
         actorEmail: req.userEmail ?? null,

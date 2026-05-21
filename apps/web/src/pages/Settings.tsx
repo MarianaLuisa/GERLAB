@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import { api } from "../services/api";
-import { Alert, Button, PageHeader, Panel, SectionHeader, TextArea, TextInput } from "../components/ui";
+import { Alert, Button, PageHeader, Panel, SectionHeader, SelectInput, TextArea, TextInput } from "../components/ui";
+import { applyPreferences, normalizeLocale, normalizeTheme } from "../services/preferences";
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -30,8 +31,8 @@ function normalizeSettings(s: SettingsResponse): Form {
     notificationToEmails: s.notificationToEmails ?? "",
     allowedManagerEmails: s.allowedManagerEmails ?? "",
     requireInstitutionalDomain: Boolean(s.requireInstitutionalDomain ?? true),
-    theme: s.theme ?? "light",
-    locale: s.locale ?? "pt-BR",
+    theme: normalizeTheme(s.theme),
+    locale: normalizeLocale(s.locale),
   };
 }
 
@@ -53,6 +54,7 @@ export function Settings() {
       setErr(null);
       try {
         const s = await api.getSettings();
+        applyPreferences(s);
         setF(normalizeSettings(s));
       } catch (e: unknown) {
         setErr(errorMessage(e, "Erro ao carregar configurações."));
@@ -96,6 +98,7 @@ export function Settings() {
       });
 
       const reloaded = await api.getSettings().catch(() => saved);
+      applyPreferences(reloaded);
       setF(normalizeSettings(reloaded));
       setOk("Configurações salvas.");
     } catch (e: unknown) {
@@ -159,10 +162,17 @@ export function Settings() {
 
         <SettingsCard title="Aparência e localidade" desc="Preferências de interface.">
           <SettingsRow label="Tema">
-            <TextInput value={f.theme} onChange={(e) => set("theme", e.target.value)} placeholder="light" />
+            <SelectInput value={f.theme} onChange={(e) => set("theme", e.target.value)}>
+              <option value="light">Claro</option>
+              <option value="dark">Escuro</option>
+            </SelectInput>
           </SettingsRow>
           <SettingsRow label="Idioma">
-            <TextInput value={f.locale} onChange={(e) => set("locale", e.target.value)} placeholder="pt-BR" />
+            <SelectInput value={f.locale} onChange={(e) => set("locale", e.target.value)}>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="en-US">English (US)</option>
+              <option value="es-ES">Español</option>
+            </SelectInput>
           </SettingsRow>
         </SettingsCard>
       </div>

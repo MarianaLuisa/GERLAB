@@ -1,7 +1,10 @@
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { FileText, LayoutDashboard, Lock, LogOut, Settings, ShieldCheck, Users } from "lucide-react";
 import { logout } from "../services/auth";
 import logo from "../assets/logo.png";
+import { api } from "../services/api";
+import { applyPreferences, normalizeTheme } from "../services/preferences";
 
 const navItems = [
   { to: "/", label: "Início", icon: LayoutDashboard },
@@ -13,6 +16,25 @@ const navItems = [
 
 export function AppLayout() {
   const navigate = useNavigate();
+  const [theme, setTheme] = useState(() => normalizeTheme(localStorage.getItem("gerlab_theme")));
+
+  useEffect(() => {
+    function onPreferences(event: Event) {
+      const detail = (event as CustomEvent<{ theme?: string }>).detail;
+      setTheme(normalizeTheme(detail?.theme));
+    }
+
+    window.addEventListener("gerlab:preferences", onPreferences);
+
+    api.getSettings()
+      .then((settings) => {
+        applyPreferences(settings);
+        setTheme(normalizeTheme(settings.theme));
+      })
+      .catch(() => {});
+
+    return () => window.removeEventListener("gerlab:preferences", onPreferences);
+  }, []);
 
   function handleLogout() {
     logout();
@@ -20,7 +42,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] text-[#172033]">
+    <div className={theme === "dark" ? "min-h-screen bg-[#0F172A] text-[#E5EDF6]" : "min-h-screen bg-[#F5F7FA] text-[#172033]"}>
       <div className="flex min-h-screen flex-col lg:flex-row">
         <aside className="sticky top-0 z-20 flex border-b border-white/10 bg-[#052B4F] text-white lg:h-screen lg:w-[16rem] lg:flex-col lg:border-b-0">
           <div className="flex w-full flex-col">

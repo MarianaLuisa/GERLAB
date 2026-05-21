@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Modal } from "./Modal";
 import { api } from "../services/api";
+import { formatDateTime } from "../services/preferences";
 import type { Allocation, Locker } from "../types/models";
 import { Alert, Button, EmptyCell, tableClass, tdClass, thClass, theadClass } from "./ui";
 
@@ -22,10 +23,7 @@ function lockerLabel(l: Locker) {
 }
 
 function fmt(dt?: string | null) {
-  if (!dt) return "-";
-  const d = new Date(dt);
-  if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleString();
+  return formatDateTime(dt);
 }
 
 export function HistoryModal({ open, onClose, locker }: Props) {
@@ -92,7 +90,7 @@ export function HistoryModal({ open, onClose, locker }: Props) {
                   <tr key={a.id} className="transition hover:bg-[#FAFCFF]">
                     <td className={`${tdClass} font-semibold text-[#1D2939]`}>{a.userName}</td>
                     <td className={`${tdClass} text-[#667085]`}>{fmt(a.startAt)}</td>
-                    <td className={`${tdClass} text-[#667085]`}>{a.dueAt ? new Date(a.dueAt).toLocaleString() : "-"}</td>
+                    <td className={`${tdClass} text-[#667085]`}>{formatDateTime(a.dueAt)}</td>
                     <td className={`${tdClass} text-[#667085]`}>{fmt(a.endAt ?? null)}</td>
                   </tr>
                 ))

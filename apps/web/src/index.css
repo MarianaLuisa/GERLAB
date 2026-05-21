@@ -9,6 +9,11 @@
   text-rendering: optimizeLegibility;
 }
 
+:root[data-theme="dark"] {
+  color: #eef4fb;
+  background: #0f172a;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -23,6 +28,10 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background: #f5f7fa;
+}
+
+:root[data-theme="dark"] body {
+  background: #0f172a;
 }
 
 button,

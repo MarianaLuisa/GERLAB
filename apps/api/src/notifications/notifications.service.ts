@@ -8,7 +8,7 @@ type SendNotificationInput = {
   entity: AuditEntity;
   entityId?: string | null;
 
-  toEmail: string;
+  toEmail?: string | null;
   subject: string;
   body: string;
 
@@ -23,17 +23,23 @@ function envBool(v: any) {
   return s === '1' || s === 'true' || s === 'yes';
 }
 
+function hasRealEnv(name: string) {
+  const value = String(process.env[name] ?? '').trim();
+  if (!value) return false;
+  return !['seuemail@gmail.com', 'senha_app', 'PROPPGI <seuemail@gmail.com>'].includes(value);
+}
+
 @Injectable()
 export class NotificationsService {
   constructor(private prisma: PrismaService) {}
 
   private smtpConfigured() {
     return (
-      !!process.env.SMTP_HOST &&
-      !!process.env.SMTP_PORT &&
-      !!process.env.SMTP_USER &&
-      !!process.env.SMTP_PASS &&
-      !!process.env.SMTP_FROM
+      hasRealEnv('SMTP_HOST') &&
+      hasRealEnv('SMTP_PORT') &&
+      hasRealEnv('SMTP_USER') &&
+      hasRealEnv('SMTP_PASS') &&
+      hasRealEnv('SMTP_FROM')
     );
   }
 
@@ -57,12 +63,23 @@ export class NotificationsService {
       update: {},
     });
 
-    // sempre grava outbox
+    if (!settings.notificationsEnabled) {
+      return { ok: true, outboxId: null, status: 'SKIPPED_DISABLED' as const };
+    }
+
+    const toEmail = String(input.toEmail ?? settings.notificationToEmails ?? '')
+      .toLowerCase()
+      .trim();
+    if (!toEmail) {
+      return { ok: true, outboxId: null, status: 'SKIPPED_NO_RECIPIENT' as const };
+    }
+
+    // grava outbox apenas quando notificações estão ativas e há destinatário
     const outbox = await this.prisma.notificationOutbox.create({
       data: {
         channel: 'EMAIL',
         event: input.event,
-        toEmail: input.toEmail.toLowerCase().trim(),
+        toEmail,
         subject: input.subject,
         body: input.body,
         status: 'PENDING',
@@ -70,11 +87,6 @@ export class NotificationsService {
         entityId: input.entityId ?? null,
       },
     });
-
-    // se notificações desligadas, mantém pendente
-    if (!settings.notificationsEnabled) {
-      return { ok: true, outboxId: outbox.id, status: 'PENDING' as const };
-    }
 
     // sem SMTP configurado: marca error (mas fica auditável)
     if (!this.smtpConfigured()) {
